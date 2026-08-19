@@ -1,0 +1,11 @@
+[
+  {
+    "question": "What is V-Care app?",
+    "answer": "V-Care is a blood donor management application."
+  },
+  {
+    "question": "How do I register?",
+    "answer": "Go to Home screen and tap Register Donor."
+  }
+]</content>
+<parameter name="filePath">c:\Users\haarish\OneDrive\Desktop\vcare-app-0.1\backend\documents\knowledge_base.json
