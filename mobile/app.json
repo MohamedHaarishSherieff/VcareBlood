@@ -32,15 +32,24 @@
         "WRITE_EXTERNAL_STORAGE",
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "RECORD_AUDIO"
+        "RECORD_AUDIO",
+        "READ_PHONE_STATE",
+        "READ_CALL_LOG",
+        "ANSWER_PHONE_CALLS"
       ],
-      "usesCleartextTraffic": false,
-      "minSdkVersion": 21,
-      "targetSdkVersion": 31
+      "statusBar": {
+        "barStyle": "light-content",
+        "backgroundColor": "#D32F2F",
+        "translucent": true
+      },
+      "navigationBar": {
+        "visible": "sticky-immersive",
+        "barStyle": "light-content"
+      },
+      "usesCleartextTraffic": false
     },
     "web": {
-      "favicon": "./assets/logo - Edited.png",
-      "bundler": "webpack"
+      "favicon": "./assets/logo - Edited.png"
     },
     "plugins": [
       [
@@ -49,9 +58,18 @@
           "photosPermission": "Allow V-Care to access your photos",
           "cameraPermission": "Allow V-Care to access your camera"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.0"
+          }
+        }
       ]
     ],
     "extra": {
+      "truecallerClientId": "zkbuc8_kza03r3gtd2lowrtonrwlxspcgaledophqns",
       "eas": {
         "projectId": "f91c26e1-7840-4591-970f-b5d9770b3142"
       }

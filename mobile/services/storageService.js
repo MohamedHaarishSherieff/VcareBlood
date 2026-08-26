@@ -1,26 +1,36 @@
-import { ref, uploadString, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, uploadString, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '../firebase/config';
+
+const uploadMediaFile = async (fileRef, base64OrUri) => {
+  if (typeof base64OrUri !== 'string') throw new Error('Invalid image format');
+
+  if (base64OrUri.startsWith('data:')) {
+    const snapshot = await uploadString(fileRef, base64OrUri, 'data_url');
+    return getDownloadURL(snapshot.ref);
+  } else if (base64OrUri.startsWith('http') || base64OrUri.startsWith('file:') || base64OrUri.startsWith('content:')) {
+    const response = await fetch(base64OrUri);
+    const blob = await response.blob();
+    const snapshot = await uploadBytes(fileRef, blob);
+    return getDownloadURL(snapshot.ref);
+  } else {
+    const snapshot = await uploadString(fileRef, base64OrUri, 'base64');
+    return getDownloadURL(snapshot.ref);
+  }
+};
 
 const storageService = {
   uploadProfilePhoto: async ({ userId, base64 }) => {
     if (!userId) throw new Error('Missing userId for profile photo upload');
-
     const path = `profile_photos/${userId}.jpg`;
     const fileRef = ref(storage, path);
-
-    // base64 should be data URL format (data:image/jpeg;base64,....)
-    const snapshot = await uploadString(fileRef, base64, 'data_url');
-    return getDownloadURL(snapshot.ref);
+    return uploadMediaFile(fileRef, base64);
   },
 
   uploadPostImage: async ({ postId, base64 }) => {
     if (!postId) throw new Error('Missing postId for post image upload');
-
     const path = `post_images/${postId}.jpg`;
     const fileRef = ref(storage, path);
-
-    const snapshot = await uploadString(fileRef, base64, 'data_url');
-    return getDownloadURL(snapshot.ref);
+    return uploadMediaFile(fileRef, base64);
   },
 
   deleteProfilePhoto: async (userId) => {
@@ -41,7 +51,6 @@ const storageService = {
       const fileRef = ref(storage, path);
       await deleteObject(fileRef);
     } catch (error) {
-      // It's common for posts not to have images, so we just log a warning
       console.log('Image not found or deletion skipped:', error.message);
     }
   },

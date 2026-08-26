@@ -201,18 +201,32 @@ export default function SettingsScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
   },
   container: {
-    paddingBottom: 20,
+    padding: 16,
+    paddingBottom: 120,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 16,
-    marginHorizontal: 16,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 16,
+    marginHorizontal: 4,
   },
   section: {
     width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
   },
   deleteConfirmationRow: {
     flexDirection: 'row',
@@ -222,5 +236,7 @@ const styles = StyleSheet.create({
   deleteConfirmationText: {
     flex: 1,
     marginLeft: 8,
+    color: '#475569',
+    fontSize: 13,
   },
 });

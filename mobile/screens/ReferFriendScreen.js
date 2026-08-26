@@ -45,12 +45,8 @@ export default function ReferFriendScreen({ navigation }) {
   // SMS and Email buttons removed per request — keep generic share and WhatsApp
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.header}>
-        <Button mode="text" onPress={onLoginPress} compact>
-          Login
-        </Button>
-      </View>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.colors.background }]} edges={['bottom', 'left', 'right']}>
+
       <View style={styles.container}>
         <Title style={[styles.title, { color: theme.colors.primary }]}>
           Invite Your Friends to Save Lives ❤️
@@ -105,16 +101,29 @@ export default function ReferFriendScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  container: { flex: 1, padding: 20, alignItems: 'center' },
+  safe: { flex: 1, backgroundColor: '#F8FAFC' },
+  container: {
+    flex: 1,
+    padding: 20,
+    alignItems: 'center',
+    margin: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+  },
   header: { width: '100%', flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', paddingHorizontal: 8, paddingTop: 8 },
-  title: { textAlign: 'center', marginBottom: 12 },
-  intro: { textAlign: 'center', marginBottom: 18 },
-  image: { width: 180, height: 120, marginBottom: 18 },
-  shareSection: { width: '100%', marginBottom: 12 },
-  shareTitle: { fontWeight: '600', marginBottom: 8 },
+  title: { textAlign: 'center', marginBottom: 12, fontSize: 22, fontWeight: '800', color: '#D32F2F', letterSpacing: -0.3 },
+  intro: { textAlign: 'center', marginBottom: 18, color: '#475569', fontSize: 14, lineHeight: 22 },
+  image: { width: 200, height: 100, marginBottom: 20 },
+  shareSection: { width: '100%', marginBottom: 16 },
+  shareTitle: { fontWeight: '700', marginBottom: 12, textAlign: 'center', color: '#0F172A', fontSize: 14 },
   buttonRow: { marginVertical: 6 },
-  shareButton: { alignSelf: 'stretch' },
-  quote: { fontStyle: 'italic', textAlign: 'center', marginTop: 12 },
-  // bottom CTA styles removed
+  shareButton: { alignSelf: 'stretch', borderRadius: 14 },
+  quote: { fontStyle: 'italic', textAlign: 'center', marginTop: 16, color: '#64748B', fontSize: 13 },
 });

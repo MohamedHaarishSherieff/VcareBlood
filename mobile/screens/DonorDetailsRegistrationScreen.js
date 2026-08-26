@@ -37,7 +37,7 @@ const currentYear = new Date().getFullYear();
 const years = Array.from({ length: currentYear - 1900 + 1 }, (_, index) => currentYear - index);
 
 const DonorDetailsRegistrationScreen = ({ navigation, route }) => {
-  const { phoneNumber } = route.params;
+  const { phoneNumber, name } = route?.params || {};
   const screenHeight = Dimensions.get('window').height;
   
   const [loading, setLoading] = useState(false);
@@ -49,7 +49,7 @@ const DonorDetailsRegistrationScreen = ({ navigation, route }) => {
   const slideAnim = useRef(new Animated.Value(30)).current;
   
   const [formData, setFormData] = useState({
-    name: '',
+    name: name || '',
     dateOfBirth: '',
     gender: '',
     bloodGroup: '',
@@ -58,142 +58,120 @@ const DonorDetailsRegistrationScreen = ({ navigation, route }) => {
     phoneNumber: phoneNumber || '',
   });
 
-  // Modal states
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalType, setModalType] = useState(null);
-  const [modalTitle, setModalTitle] = useState('');
-  const [modalData, setModalData] = useState([]);
+  const [modalType, setModalType] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-
-  const [availableDistricts, setAvailableDistricts] = useState([]);
+  const [modalData, setModalData] = useState([]);
 
   useEffect(() => {
-    if (formData.state) {
-      const districts = statesWithDistricts[formData.state] || [];
-      setAvailableDistricts(districts);
-      if (formData.city && !districts.includes(formData.city)) {
-        updateFormData('city', '');
-      }
-    } else {
-      setAvailableDistricts([]);
-      updateFormData('city', '');
+    if (phoneNumber) {
+      setFormData(prev => ({ ...prev, phoneNumber }));
     }
-  }, [formData.state]);
+    if (name) {
+      setFormData(prev => ({ ...prev, name }));
+    }
+  }, [phoneNumber, name]);
 
-  const updateFormData = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const updateFormData = (key, value) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
   };
 
   const openSelectionModal = (type) => {
     setModalType(type);
     setSearchQuery('');
-    if (type === 'gender') {
-      setModalTitle('Select Gender');
-      setModalData(genders);
-    } else if (type === 'bloodGroup') {
-      setModalTitle('Select Blood Group');
-      setModalData(bloodGroups);
-    } else if (type === 'state') {
-      setModalTitle('Select State');
-      setModalData(states);
-    } else if (type === 'city') {
-      setModalTitle('Select City/District');
-      setModalData(availableDistricts);
-    }
+    
+    if (type === 'bloodGroup') setModalData(bloodGroups);
+    else if (type === 'gender') setModalData(genders);
+    else if (type === 'state') setModalData(states);
+    else if (type === 'city' && formData.state) setModalData(statesWithDistricts[formData.state] || []);
+    
     setModalVisible(true);
   };
 
-  const handleSelect = (item) => {
-    updateFormData(modalType, item);
+  const selectOption = (value) => {
+    if (modalType === 'state') {
+      setFormData(prev => ({ ...prev, state: value, city: '' }));
+    } else {
+      updateFormData(modalType, value);
+    }
     setModalVisible(false);
   };
 
-  const getDaysInMonth = (year, monthIndex) => {
-    return new Date(year, monthIndex + 1, 0).getDate();
-  };
-
   const openDateModal = () => {
-    const current = formData.dateOfBirth ? parseDateString(formData.dateOfBirth) : new Date(2000, 0, 1);
-    setTempDay(current.getDate());
-    setTempMonth(current.getMonth());
-    setTempYear(current.getFullYear());
+    if (formData.dateOfBirth) {
+      const parts = formData.dateOfBirth.split('-');
+      if (parts.length === 3) {
+        setTempYear(parseInt(parts[0], 10));
+        setTempMonth(parseInt(parts[1], 10) - 1);
+        setTempDay(parseInt(parts[2], 10));
+      }
+    }
     setDatePickerVisible(true);
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 250, useNativeDriver: true })
+    ]).start();
   };
 
-  const handleSaveDate = () => {
-    const selected = new Date(tempYear, tempMonth, tempDay);
+  const confirmDate = () => {
+    const formattedMonth = String(tempMonth + 1).padStart(2, '0');
+    const formattedDay = String(tempDay).padStart(2, '0');
+    const selectedDateStr = `${tempYear}-${formattedMonth}-${formattedDay}`;
+
+    const birthDate = new Date(tempYear, tempMonth, tempDay);
     const today = new Date();
-    if (selected > today) {
-      return Alert.alert('Invalid date', 'Date of birth cannot be in the future.');
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
     }
-    const year = selected.getFullYear();
-    const month = String(selected.getMonth() + 1).padStart(2, '0');
-    const day = String(selected.getDate()).padStart(2, '0');
-    updateFormData('dateOfBirth', `${year}-${month}-${day}`);
+
+    if (age < 18) {
+      Alert.alert('Age Restriction', 'You must be at least 18 years old to register as a donor.');
+      return;
+    }
+
+    updateFormData('dateOfBirth', selectedDateStr);
     setDatePickerVisible(false);
   };
 
-  useEffect(() => {
-    if (datePickerVisible) {
-      fadeAnim.setValue(0);
-      slideAnim.setValue(30);
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [datePickerVisible]);
-
-  useEffect(() => {
-    const daysInMonth = getDaysInMonth(tempYear, tempMonth);
-    if (tempDay > daysInMonth) {
-      setTempDay(daysInMonth);
-    }
-  }, [tempMonth, tempYear]);
-
-  const formatDateForDisplay = (dateString) => {
-    if (!dateString) return 'Select your date';
-    try {
-      const parts = dateString.split('-');
-      if (parts.length !== 3) return dateString;
-      const date = new Date(parts[0], parseInt(parts[1], 10) - 1, parts[2]);
-      if (isNaN(date.getTime())) return dateString;
-      return date.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
-    } catch (error) {
-      return dateString;
-    }
+  const formatDateForDisplay = (dateStr) => {
+    if (!dateStr) return 'Select Date of Birth';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const year = parts[0];
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    return `${day} ${monthNames[monthIndex]} ${year}`;
   };
 
-  const parseDateString = (dateString) => {
-    const parts = dateString.split('-');
-    if (parts.length !== 3) return new Date(2000, 0, 1);
-    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  const getDaysInMonth = (month, year) => {
+    return new Date(year, month + 1, 0).getDate();
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.dateOfBirth || !formData.gender || !formData.bloodGroup || !formData.state || !formData.city) {
-      return Alert.alert('Validation', 'Please fill all required fields');
+    if (!formData.name.trim() || !formData.dateOfBirth || !formData.gender || !formData.bloodGroup || !formData.state || !formData.city) {
+      Alert.alert('Incomplete Form', 'Please fill in all required fields marked with *');
+      return;
+    }
+
+    if (!formData.phoneNumber) {
+      Alert.alert('Error', 'Verified mobile number is missing. Please start verification again.');
+      return;
     }
 
     setLoading(true);
+
     try {
       const profileData = {
-        phoneNumber: formData.phoneNumber,
-        name: formData.name,
-        nameLower: formData.name.trim().toLowerCase(),
+        name: formData.name.trim(),
         dateOfBirth: formData.dateOfBirth,
         gender: formData.gender,
         bloodGroup: formData.bloodGroup,
         state: formData.state,
         city: formData.city,
+        phoneNumber: formData.phoneNumber,
+        isVerified: true,
         updatedAt: serverTimestamp(),
       };
 
@@ -202,7 +180,7 @@ const DonorDetailsRegistrationScreen = ({ navigation, route }) => {
       await AsyncStorage.setItem('userPhoneNumber', formData.phoneNumber);
 
       setLoading(false);
-      navigation.navigate('ProfileTab');
+      navigation.navigate('HomeTab');
     } catch (error) {
       setLoading(false);
       Alert.alert('Error', 'Registration failed. Please try again.');
@@ -220,7 +198,7 @@ const DonorDetailsRegistrationScreen = ({ navigation, route }) => {
         onPress={() => navigation.goBack()}
         style={styles.backButton}
       >
-        <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
+        <MaterialCommunityIcons name="arrow-left" size={24} color="#334155" />
       </TouchableOpacity>
 
       <ScrollView
@@ -235,37 +213,52 @@ const DonorDetailsRegistrationScreen = ({ navigation, route }) => {
         </View>
 
         <View style={styles.card}>
+          {/* Locked Verified Phone Badge */}
+          {formData.phoneNumber ? (
+            <View style={styles.verifiedPhoneBadge}>
+              <MaterialCommunityIcons name="shield-check" size={20} color="#16A34A" />
+              <Text style={styles.verifiedPhoneText}>
+                Verified Phone: +91 {formData.phoneNumber}
+              </Text>
+            </View>
+          ) : null}
+
           <Text style={styles.label}>Full Name *</Text>
-          <TextInput value={formData.name} onChangeText={(val) => updateFormData('name', val)} style={styles.input} placeholder="John Doe" />
+          <TextInput 
+            value={formData.name} 
+            onChangeText={(val) => updateFormData('name', val)} 
+            style={styles.input} 
+            placeholder="John Doe" 
+          />
 
           <Text style={styles.label}>Gender *</Text>
           <TouchableOpacity style={styles.pickerTrigger} onPress={() => openSelectionModal('gender')}>
             <Text style={[styles.pickerValue, !formData.gender && styles.placeholder]}>{formData.gender || 'Select Gender'}</Text>
-            <MaterialCommunityIcons name="chevron-down" size={20} color="#ff6b6b" />
+            <MaterialCommunityIcons name="chevron-down" size={20} color="#D32F2F" />
           </TouchableOpacity>
 
           <Text style={styles.label}>Date of Birth *</Text>
           <TouchableOpacity style={styles.pickerTrigger} onPress={openDateModal} accessibilityRole="button" accessibilityLabel="Select date of birth">
             <Text style={[styles.pickerValue, !formData.dateOfBirth && styles.placeholder]}>{formatDateForDisplay(formData.dateOfBirth)}</Text>
-            <MaterialCommunityIcons name="calendar" size={20} color="#ff6b6b" />
+            <MaterialCommunityIcons name="calendar" size={20} color="#D32F2F" />
           </TouchableOpacity>
 
           <Text style={styles.label}>Blood Group *</Text>
           <TouchableOpacity style={styles.pickerTrigger} onPress={() => openSelectionModal('bloodGroup')}>
             <Text style={[styles.pickerValue, !formData.bloodGroup && styles.placeholder]}>{formData.bloodGroup || 'Select Blood Group'}</Text>
-            <MaterialCommunityIcons name="chevron-down" size={20} color="#ff6b6b" />
+            <MaterialCommunityIcons name="chevron-down" size={20} color="#D32F2F" />
           </TouchableOpacity>
 
           <Text style={styles.label}>State *</Text>
           <TouchableOpacity style={styles.pickerTrigger} onPress={() => openSelectionModal('state')}>
             <Text style={[styles.pickerValue, !formData.state && styles.placeholder]}>{formData.state || 'Select State'}</Text>
-            <MaterialCommunityIcons name="chevron-down" size={20} color="#ff6b6b" />
+            <MaterialCommunityIcons name="chevron-down" size={20} color="#D32F2F" />
           </TouchableOpacity>
 
           <Text style={styles.label}>City/District *</Text>
           <TouchableOpacity style={[styles.pickerTrigger, !formData.state && styles.disabledTrigger]} onPress={() => formData.state && openSelectionModal('city')} disabled={!formData.state}>
             <Text style={[styles.pickerValue, !formData.city && styles.placeholder]}>{formData.city || (formData.state ? 'Select City' : 'Select state first')}</Text>
-            <MaterialCommunityIcons name="map-marker" size={20} color={formData.state ? "#ff6b6b" : "#ccc"} />
+            <MaterialCommunityIcons name="map-marker" size={20} color={formData.state ? "#D32F2F" : "#ccc"} />
           </TouchableOpacity>
 
           <Button mode="contained" onPress={handleSubmit} loading={loading} disabled={loading} style={styles.submitBtn}>
@@ -289,107 +282,71 @@ const DonorDetailsRegistrationScreen = ({ navigation, route }) => {
               <IconButton icon="close" size={24} onPress={() => setDatePickerVisible(false)} accessibilityLabel="Cancel" />
             </View>
 
-            <View style={styles.selectorRow}>
-              <View style={styles.selectorColumn}>
-                <Text style={styles.selectorLabel}>Day</Text>
-                <ScrollView showsVerticalScrollIndicator={false} snapToInterval={44} decelerationRate="fast" contentContainerStyle={styles.selectorList} accessibilityRole="radiogroup">
-                  {Array.from({ length: getDaysInMonth(tempYear, tempMonth) }, (_, index) => index + 1).map(day => (
-                    <TouchableOpacity
-                      key={`day-${day}`}
-                      onPress={() => setTempDay(day)}
-                      style={[styles.selectorItem, tempDay === day && styles.selectorItemSelected]}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: tempDay === day }}
-                      accessibilityLabel={`Day ${day}`}
-                    >
-                      <Text style={[styles.selectorItemText, tempDay === day && styles.selectorItemTextSelected]}>{day}</Text>
+            <View style={styles.pickerColumnsContainer}>
+              {/* Day Column */}
+              <View style={styles.pickerColumn}>
+                <Text style={styles.columnHeader}>Day</Text>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollColContent}>
+                  {Array.from({ length: getDaysInMonth(tempMonth, tempYear) }, (_, i) => i + 1).map((day) => (
+                    <TouchableOpacity key={day} style={[styles.pickerItem, tempDay === day && styles.selectedPickerItem]} onPress={() => setTempDay(day)}>
+                      <Text style={[styles.pickerItemText, tempDay === day && styles.selectedPickerItemText]}>{day}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
               </View>
 
-              <View style={styles.selectorColumn}>
-                <Text style={styles.selectorLabel}>Month</Text>
-                <ScrollView showsVerticalScrollIndicator={false} snapToInterval={44} decelerationRate="fast" contentContainerStyle={styles.selectorList} accessibilityRole="radiogroup">
-                  {monthNames.map((month, index) => (
-                    <TouchableOpacity
-                      key={month}
-                      onPress={() => setTempMonth(index)}
-                      style={[styles.selectorItem, tempMonth === index && styles.selectorItemSelected]}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: tempMonth === index }}
-                      accessibilityLabel={month}
-                    >
-                      <Text style={[styles.selectorItemText, tempMonth === index && styles.selectorItemTextSelected]}>{month}</Text>
+              {/* Month Column */}
+              <View style={styles.pickerColumn}>
+                <Text style={styles.columnHeader}>Month</Text>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollColContent}>
+                  {monthNames.map((month, idx) => (
+                    <TouchableOpacity key={month} style={[styles.pickerItem, tempMonth === idx && styles.selectedPickerItem]} onPress={() => setTempMonth(idx)}>
+                      <Text style={[styles.pickerItemText, tempMonth === idx && styles.selectedPickerItemText]}>{month}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
               </View>
 
-              <View style={[styles.selectorColumn, styles.yearColumn]}>
-                <Text style={styles.selectorLabel}>Year</Text>
-                <ScrollView showsVerticalScrollIndicator={false} snapToInterval={44} decelerationRate="fast" contentContainerStyle={styles.selectorList} accessibilityRole="radiogroup">
-                  {years.map(year => (
-                    <TouchableOpacity
-                      key={year}
-                      onPress={() => setTempYear(year)}
-                      style={[styles.selectorItem, tempYear === year && styles.selectorItemSelected]}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: tempYear === year }}
-                      accessibilityLabel={`${year}`}
-                    >
-                      <Text style={[styles.selectorItemText, tempYear === year && styles.selectorItemTextSelected]}>{year}</Text>
+              {/* Year Column */}
+              <View style={styles.pickerColumn}>
+                <Text style={styles.columnHeader}>Year</Text>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollColContent}>
+                  {years.map((year) => (
+                    <TouchableOpacity key={year} style={[styles.pickerItem, tempYear === year && styles.selectedPickerItem]} onPress={() => setTempYear(year)}>
+                      <Text style={[styles.pickerItemText, tempYear === year && styles.selectedPickerItemText]}>{year}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
               </View>
             </View>
 
-            <View style={styles.modalActionRow}>
-              <Button mode="outlined" onPress={() => setDatePickerVisible(false)} style={styles.cancelButton} accessibilityLabel="Cancel date selection">
-                Cancel
-              </Button>
-              <Button mode="contained" onPress={handleSaveDate} style={styles.saveButton} accessibilityLabel="Save date of birth">
-                Save
-              </Button>
+            <View style={styles.modalActions}>
+              <Button mode="outlined" onPress={() => setDatePickerVisible(false)} style={styles.cancelBtn}>Cancel</Button>
+              <Button mode="contained" onPress={confirmDate} style={styles.confirmBtn}>Confirm</Button>
             </View>
           </Animated.View>
         </Modal>
 
-        <Modal
-          visible={modalVisible}
-          onDismiss={() => setModalVisible(false)}
-          contentContainerStyle={[styles.modalContainer, { maxHeight: screenHeight * 0.7 }]}
-        >
+        {/* Selection Modal */}
+        <Modal visible={modalVisible} onDismiss={() => setModalVisible(false)} contentContainerStyle={styles.selectionModal}>
           <View style={styles.modalHeader}>
-            <Title style={styles.modalTitle}>{modalTitle}</Title>
+            <Title style={styles.modalTitle}>Select {modalType.charAt(0).toUpperCase() + modalType.slice(1)}</Title>
             <IconButton icon="close" size={24} onPress={() => setModalVisible(false)} />
           </View>
-          
-          {(modalType === 'state' || modalType === 'city') && (
-            <Searchbar
-              placeholder="Search..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              style={styles.modalSearch}
-            />
+
+          {modalData.length > 5 && (
+            <Searchbar placeholder="Search..." onChangeText={setSearchQuery} value={searchQuery} style={styles.searchBar} />
           )}
 
           <FlatList
             data={filteredData}
-            keyExtractor={item => item}
+            keyExtractor={(item) => item}
             renderItem={({ item }) => (
-              <TouchableOpacity style={styles.modalItem} onPress={() => handleSelect(item)}>
-                <Text style={[styles.modalItemText, item === formData[modalType] && styles.selectedItemText]}>
-                  {item}
-                </Text>
-                {item === formData[modalType] && (
-                  <MaterialCommunityIcons name="check" size={20} color="#ff6b6b" />
-                )}
+              <TouchableOpacity style={styles.listItem} onPress={() => selectOption(item)}>
+                <Text style={styles.listItemText}>{item}</Text>
+                <MaterialCommunityIcons name="chevron-right" size={20} color="#D32F2F" />
               </TouchableOpacity>
             )}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-            contentContainerStyle={styles.modalList}
           />
         </Modal>
       </Portal>
@@ -398,88 +355,205 @@ const DonorDetailsRegistrationScreen = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ff6b6b' },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   backButton: {
     position: 'absolute',
-    top: 50,
+    top: 48,
     left: 20,
     zIndex: 10,
-    padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  scrollContent: { padding: 20, paddingTop: 60, paddingBottom: 120 },
-  headerSection: { alignItems: 'center', marginBottom: 20 },
-  mainTitle: { fontSize: 32, fontWeight: '800', color: '#fff', textAlign: 'center' },
-  subtitle: { fontSize: 16, color: '#fff', textAlign: 'center', opacity: 0.9 },
-  card: { backgroundColor: '#fff', borderRadius: 24, padding: 20, elevation: 10 },
-  label: { fontSize: 14, fontWeight: '700', color: '#555', marginBottom: 6, marginTop: 12 },
+  scrollContent: {
+    padding: 20,
+    paddingTop: 80,
+  },
+  headerSection: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  mainTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 4,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  verifiedPhoneBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  verifiedPhoneText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#15803D',
+    marginLeft: 8,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 6,
+    marginTop: 10,
+  },
   input: {
-    borderWidth: 1.5,
-    borderColor: '#ffbaba',
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#fff'
+    fontSize: 15,
+    color: '#0F172A',
+    backgroundColor: '#FFFFFF',
   },
   pickerTrigger: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1.5,
-    borderColor: '#ffbaba',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#fff'
-  },
-  disabledTrigger: { backgroundColor: '#f9f9f9', borderColor: '#eee' },
-  pickerValue: { fontSize: 16, color: '#333', fontWeight: '500' },
-  placeholder: { color: '#ccc' },
-  submitBtn: { backgroundColor: '#ff6b6b', borderRadius: 12, marginTop: 30, paddingVertical: 6 },
-  
-  // Date picker modal styles
-  datePickerModal: { backgroundColor: 'white', padding: 16, marginHorizontal: 20, borderRadius: 20, alignItems: 'center' },
-  datePickerContent: { backgroundColor: '#fff', borderRadius: 20, padding: 16, alignItems: 'center', width: '100%' },
-  selectorRow: { flexDirection: 'row', justifyContent: 'center', width: '100%', marginTop: 8 },
-  selectorColumn: { width: 96, alignItems: 'center', marginHorizontal: 6 },
-  selectorLabel: { fontSize: 14, fontWeight: '600', color: '#555', marginBottom: 10 },
-  selectorList: { paddingVertical: 8, alignItems: 'center', width: '100%', maxHeight: 260 },
-  selectorItem: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-    marginBottom: 8,
-    backgroundColor: '#fafafa',
     alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
   },
-  selectorItemSelected: {
-    borderColor: '#ff6b6b',
-    backgroundColor: '#ffe7e7',
+  disabledTrigger: {
+    backgroundColor: '#F1F5F9',
   },
-  selectorItemText: { fontSize: 14, color: '#444' },
-  selectorItemTextSelected: { color: '#d00000', fontWeight: '700' },
-  yearColumn: { width: 108 },
-  yearScroll: { width: '100%', maxHeight: 260, borderRadius: 12, borderWidth: 1, borderColor: '#f0f0f0', backgroundColor: '#fafafa', padding: 6 },
-  yearList: { alignItems: 'center' },
-  modalActionRow: { marginTop: 20, flexDirection: 'row', justifyContent: 'space-between' },
-  cancelButton: { flex: 1, borderColor: '#ff6b6b', borderWidth: 1, borderRadius: 12, marginRight: 8 },
-  saveButton: { flex: 1, backgroundColor: '#ff6b6b', borderRadius: 12 },
-  
-  // Modal Styles
-  modalContainer: { backgroundColor: 'white', padding: 20, margin: 20, borderRadius: 20 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  modalTitle: { fontSize: 18, color: '#333' },
-  modalSearch: { marginBottom: 10, borderRadius: 10, elevation: 0, backgroundColor: '#f5f5f5' },
-  modalList: { paddingBottom: 20 },
-  modalItem: { paddingVertical: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalItemText: { fontSize: 16, color: '#444' },
-  selectedItemText: { color: '#ff6b6b', fontWeight: 'bold' },
-  separator: { height: 1, backgroundColor: '#f0f0f0' },
+  pickerValue: {
+    fontSize: 15,
+    color: '#0F172A',
+    fontWeight: '500',
+  },
+  placeholder: {
+    color: '#94A3B8',
+  },
+  submitBtn: {
+    marginTop: 24,
+    backgroundColor: '#D32F2F',
+    borderRadius: 10,
+    paddingVertical: 6,
+  },
+  datePickerModal: {
+    backgroundColor: '#FFFFFF',
+    margin: 20,
+    borderRadius: 16,
+    padding: 16,
+  },
+  datePickerContent: {
+    width: '100%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  pickerColumnsContainer: {
+    flexDirection: 'row',
+    height: 180,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#E2E8F0',
+    marginVertical: 10,
+  },
+  pickerColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  columnHeader: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+    marginVertical: 6,
+  },
+  scrollColContent: {
+    paddingVertical: 4,
+  },
+  pickerItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    marginVertical: 2,
+    alignItems: 'center',
+  },
+  selectedPickerItem: {
+    backgroundColor: '#FEE2E2',
+  },
+  pickerItemText: {
+    fontSize: 14,
+    color: '#334155',
+  },
+  selectedPickerItemText: {
+    color: '#D32F2F',
+    fontWeight: '700',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+  },
+  cancelBtn: {
+    marginRight: 8,
+    borderColor: '#CBD5E1',
+  },
+  confirmBtn: {
+    backgroundColor: '#D32F2F',
+  },
+  selectionModal: {
+    backgroundColor: '#FFFFFF',
+    margin: 20,
+    borderRadius: 16,
+    padding: 16,
+    maxHeight: '70%',
+  },
+  searchBar: {
+    marginBottom: 12,
+    elevation: 0,
+    backgroundColor: '#F1F5F9',
+  },
+  listItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  listItemText: {
+    fontSize: 15,
+    color: '#1E293B',
+    fontWeight: '500',
+  },
 });
 
 export default DonorDetailsRegistrationScreen;

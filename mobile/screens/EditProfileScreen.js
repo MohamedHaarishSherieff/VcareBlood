@@ -228,7 +228,7 @@ export default function EditProfileScreen({ route, navigation }) {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom', 'left', 'right']}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Title style={styles.title}>Edit Profile</Title>
 
@@ -289,7 +289,7 @@ export default function EditProfileScreen({ route, navigation }) {
           </View>
 
           <Button mode="contained" onPress={handleSave} loading={loading} disabled={loading} style={styles.saveBtn} labelStyle={styles.btnLabel}>Save Changes</Button>
-          <Button mode="outlined" onPress={() => navigation.goBack()} style={styles.cancelBtn} textColor="#ff6b6b" disabled={loading}>Cancel</Button>
+          <Button mode="outlined" onPress={() => navigation.navigate('ProfileTab')} style={styles.cancelBtn} textColor="#ff6b6b" disabled={loading}>Cancel</Button>
         </View>
 
         {/* Extra space for Tab Bar */}
@@ -350,54 +350,65 @@ export default function EditProfileScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
-  scrollContent: { padding: 20, paddingBottom: 120 },
-  title: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20, color: 'rgb(211, 16, 16)' },
-  photoSection: { alignItems: 'center', marginBottom: 20 },
-  photoButtons: { flexDirection: 'row', justifyContent: 'center', gap: 10 },
-  profilePhoto: { width: 100, height: 100, borderRadius: 50 },
-  form: { width: '100%' },
-  label: { fontSize: 14, fontWeight: '700', color: '#555', marginBottom: 6, marginTop: 12 },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  scrollContent: { padding: 16, paddingBottom: 120 },
+  title: { fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 20, color: '#0F172A' },
+  photoSection: { alignItems: 'center', marginBottom: 24 },
+  photoButtons: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 8 },
+  profilePhoto: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F5F9' },
+  form: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+  },
+  label: { fontSize: 13, fontWeight: '700', color: '#0F172A', marginBottom: 6, marginTop: 14 },
   input: {
-    borderWidth: 1.5,
-    borderColor: '#ffbaba',
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
-    color: '#333',
-    backgroundColor: '#fff'
+    fontSize: 15,
+    color: '#0F172A',
+    backgroundColor: '#FFFFFF'
   },
   bioInput: { minHeight: 80, textAlignVertical: 'top' },
   pickerTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1.5,
-    borderColor: '#ffbaba',
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: '#fff'
+    backgroundColor: '#FFFFFF'
   },
-  disabledTrigger: { backgroundColor: '#f9f9f9', borderColor: '#eee' },
-  pickerValue: { fontSize: 16, color: '#333', fontWeight: '500' },
-  placeholder: { color: '#ccc' },
+  disabledTrigger: { backgroundColor: '#F8FAFC', borderColor: '#F1F5F9' },
+  pickerValue: { fontSize: 15, color: '#0F172A', fontWeight: '500' },
+  placeholder: { color: '#94A3B8' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 20 },
-  switchLabel: { fontSize: 14, color: '#666', flex: 1, marginRight: 10 },
-  saveBtn: { backgroundColor: '#ff6b6b', borderRadius: 12, marginTop: 10, paddingVertical: 4 },
-  cancelBtn: { borderRadius: 12, marginTop: 12, paddingVertical: 4, borderColor: '#ff6b6b' },
-  btnLabel: { fontWeight: 'bold', fontSize: 16 },
+  switchLabel: { fontSize: 13, color: '#475569', fontWeight: '600', flex: 1, marginRight: 10 },
+  saveBtn: { backgroundColor: '#D32F2F', borderRadius: 14, marginTop: 10, paddingVertical: 4 },
+  cancelBtn: { borderRadius: 14, marginTop: 10, paddingVertical: 4, borderColor: '#D32F2F' },
+  btnLabel: { fontWeight: '700', fontSize: 15 },
   
   // Modal Styles
-  modalContainer: { backgroundColor: 'white', padding: 20, margin: 20, borderRadius: 20 },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  modalTitle: { fontSize: 18, color: '#333' },
-  modalSearch: { marginBottom: 10, borderRadius: 10, elevation: 0, backgroundColor: '#f5f5f5' },
+  modalContainer: { backgroundColor: '#FFFFFF', padding: 20, margin: 20, borderRadius: 24 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  modalTitle: { fontSize: 18, color: '#0F172A', fontWeight: '700' },
+  modalSearch: { marginBottom: 12, borderRadius: 14, elevation: 0, backgroundColor: '#F1F5F9' },
   modalList: { paddingBottom: 20 },
-  modalItem: { paddingVertical: 15, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  modalItemText: { fontSize: 16, color: '#444' },
-  selectedItemText: { color: '#ff6b6b', fontWeight: 'bold' },
-  separator: { height: 1, backgroundColor: '#f0f0f0' },
+  modalItem: { paddingVertical: 14, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  modalItemText: { fontSize: 15, color: '#334155' },
+  selectedItemText: { color: '#D32F2F', fontWeight: '700' },
+  separator: { height: 1, backgroundColor: '#F1F5F9' },
 });

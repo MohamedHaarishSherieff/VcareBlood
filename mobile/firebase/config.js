@@ -36,16 +36,8 @@ const db = getFirestore(app, 'vcaredb');
 // Get Realtime Database instance
 const realtimeDB = getDatabase(app);
 
-// Initialize Auth using ReactNative persistence for Expo (fallback on web)
-let authentication;
-if (Platform.OS === 'web') {
-  authentication = getAuth(app);
-} else {
-  const { initializeAuth: initializeAuthRN, getReactNativePersistence } = require('firebase/auth/react-native');
-  authentication = initializeAuthRN(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
-}
+// Initialize Auth
+const authentication = getAuth(app);
 
 // Initialize Storage
 const storage = getStorage(app);

@@ -83,43 +83,61 @@ function CustomDrawerContent(props) {
         {isLoggedIn && (
           <DrawerItem
             label={t('home')}
+            icon={({ color, size }) => <MaterialCommunityIcons name="home-heart" size={22} color="#D32F2F" />}
+            labelStyle={styles.itemLabel}
             onPress={() => props.navigation.navigate('HomeTab')}
           />
         )}
         <DrawerItem
           label={t('donate')}
+          icon={({ color, size }) => <MaterialCommunityIcons name="hand-heart" size={22} color="#D32F2F" />}
+          labelStyle={styles.itemLabel}
           onPress={() => props.navigation.navigate('DonateAmount')}
         />
         <DrawerItem
           label={t('findDonors')}
+          icon={({ color, size }) => <MaterialCommunityIcons name="account-search" size={22} color="#1E3A8A" />}
+          labelStyle={styles.itemLabel}
           onPress={() => props.navigation.navigate('SearchDonors')}
         />
         {isLoggedIn && (
           <DrawerItem
             label={t('myProfile')}
+            icon={({ color, size }) => <MaterialCommunityIcons name="account-circle" size={22} color="#1E3A8A" />}
+            labelStyle={styles.itemLabel}
             onPress={() => props.navigation.navigate('ProfileTab')}
           />
         )}
         <DrawerItem
           label={t('referFriend')}
+          icon={({ color, size }) => <MaterialCommunityIcons name="share-variant" size={22} color="#64748B" />}
+          labelStyle={styles.itemLabel}
           onPress={() => props.navigation.navigate('ReferFriend')}
         />
         <DrawerItem
           label={t('faq')}
+          icon={({ color, size }) => <MaterialCommunityIcons name="help-circle-outline" size={22} color="#64748B" />}
+          labelStyle={styles.itemLabel}
           onPress={() => props.navigation.navigate('FAQ')}
         />
         <DrawerItem
           label={t('settings')}
+          icon={({ color, size }) => <MaterialCommunityIcons name="cog-outline" size={22} color="#64748B" />}
+          labelStyle={styles.itemLabel}
           onPress={() => props.navigation.navigate('Settings')}
         />
         <DrawerItem
           label={t('aboutUs')}
+          icon={({ color, size }) => <MaterialCommunityIcons name="information-outline" size={22} color="#64748B" />}
+          labelStyle={styles.itemLabel}
           onPress={() => props.navigation.navigate('About')}
         />
 
         {isLoggedIn && (
           <DrawerItem
             label={t('logout')}
+            icon={({ color, size }) => <MaterialCommunityIcons name="logout" size={22} color="#D32F2F" />}
+            labelStyle={[styles.itemLabel, { color: '#D32F2F', fontWeight: '700' }]}
             onPress={handleLogout}
           />
         )}
@@ -130,7 +148,7 @@ function CustomDrawerContent(props) {
 
 const styles = StyleSheet.create({
   drawerScroll: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   drawerScrollContent: {
     flex: 1,
@@ -138,45 +156,51 @@ const styles = StyleSheet.create({
   },
   drawerContent: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
   },
   drawerBackButton: {
-    padding: 6,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
   },
   loginSection: {
-    padding: 16,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff5f2',
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FFEBEE',
   },
   loginButton: {
-    backgroundColor: 'rgb(211, 16, 16)',
+    backgroundColor: '#D32F2F',
     marginBottom: 8,
+    borderRadius: 12,
   },
   loginButtonText: {
-    fontSize: 16,
-    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   loginText: {
-    color: '#666666',
+    color: '#64748B',
     fontSize: 12,
     textAlign: 'center',
+  },
+  itemLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginLeft: -12,
   },
 });
 

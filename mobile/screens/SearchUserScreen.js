@@ -64,29 +64,27 @@ export default function SearchUserScreen({ navigation }) {
       <Card.Content style={styles.cardContent}>
         <View style={styles.userInfo}>
           {item.profilePhoto ? (
-            <Avatar.Image size={50} source={{ uri: item.profilePhoto }} />
+            <Avatar.Image size={52} source={{ uri: item.profilePhoto }} />
           ) : (
-            <Avatar.Icon size={50} icon="account" style={{ backgroundColor: '#f0f0f0' }} color="#888" />
+            <Avatar.Icon size={52} icon="account" style={{ backgroundColor: '#F1F5F9' }} color="#64748B" />
           )}
           <View style={styles.textContainer}>
             <Text style={styles.userName}>{item.name || 'Anonymous User'}</Text>
             <View style={styles.locationRow}>
-              <MaterialCommunityIcons name="map-marker" size={14} color="#666" />
+              <MaterialCommunityIcons name="map-marker" size={15} color="#64748B" />
               <Text style={styles.locationText}>
                 {item.city ? `${item.city}, ${item.state}` : item.state || 'Location not set'}
               </Text>
             </View>
-            <View style={styles.bloodRow}>
-              <MaterialCommunityIcons name="water" size={14} color="#ff6b6b" />
-              <Text style={styles.bloodText}>Blood Group: {item.bloodGroup || 'Not set'}</Text>
+            <View style={styles.bloodBadge}>
+              <MaterialCommunityIcons name="water" size={14} color="#D32F2F" />
+              <Text style={styles.bloodBadgeText}>{item.bloodGroup || 'Not set'}</Text>
             </View>
           </View>
         </View>
-        <IconButton
-          icon="chevron-right"
-          iconColor={theme.colors.primary}
-          size={24}
-        />
+        <View style={styles.chevronCircle}>
+          <MaterialCommunityIcons name="chevron-right" size={20} color="#64748B" />
+        </View>
       </Card.Content>
     </Card>
   );
@@ -94,22 +92,26 @@ export default function SearchUserScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} accessibilityLabel="Go back">
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#0F172A" />
+        </TouchableOpacity>
         <Searchbar
-          placeholder="Search by name or number"
+          placeholder="Search name or 10-digit number"
           value={queryText}
           onChangeText={setQueryText}
           onSubmitEditing={runSearch}
           style={styles.searchBar}
           icon="magnify"
-          iconColor="#ff6b6b"
-          placeholderTextColor="#999"
-          elevation={2}
+          iconColor="#D32F2F"
+          placeholderTextColor="#94A3B8"
+          inputStyle={{ fontSize: 14, color: '#0F172A' }}
+          elevation={0}
         />
       </View>
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator animating size="large" color="#ff6b6b" />
+          <ActivityIndicator animating size="large" color="#D32F2F" />
           <Text style={styles.loadingText}>Searching V-Care network...</Text>
         </View>
       ) : results.length > 0 ? (
@@ -122,15 +124,17 @@ export default function SearchUserScreen({ navigation }) {
         />
       ) : searched ? (
         <View style={styles.center}>
-          <MaterialCommunityIcons name="account-search-outline" size={80} color="#ddd" />
+          <MaterialCommunityIcons name="account-search-outline" size={72} color="#CBD5E1" />
           <Text style={styles.emptyTitle}>No users found</Text>
-          <Text style={styles.emptySubtitle}>Try searching by full name or 10-digit number</Text>
+          <Text style={styles.emptySubtitle}>Try searching by full name or 10-digit phone number</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.center} keyboardShouldPersistTaps="handled">
-          <MaterialCommunityIcons name="account-group" size={100} color="#fff1f1" />
-          <Text style={styles.welcomeTitle}>Find Donors</Text>
-          <Text style={styles.welcomeSubtitle}>Search the V-Care community for life-saving connections.</Text>
+          <View style={styles.iconCircleBig}>
+            <MaterialCommunityIcons name="account-group" size={64} color="#D32F2F" />
+          </View>
+          <Text style={styles.welcomeTitle}>Search Network</Text>
+          <Text style={styles.welcomeSubtitle}>Find registered donors across the V-Care community platform.</Text>
         </ScrollView>
       )}
     </View>
@@ -138,45 +142,80 @@ export default function SearchUserScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: {
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#F1F5F9',
+  },
+  backBtn: {
+    paddingRight: 12,
   },
   searchBar: {
-    borderRadius: 12,
-    backgroundColor: '#f1f3f5',
+    flex: 1,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+    height: 48,
   },
   listContent: { padding: 16, paddingBottom: 100 },
   card: {
     marginBottom: 12,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    elevation: 3,
-    shadowColor: '#000',
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    elevation: 1,
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
   cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   userInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  textContainer: { marginLeft: 12, flex: 1 },
-  userName: { fontSize: 17, fontWeight: '700', color: '#2C3E50', marginBottom: 2 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
-  locationText: { fontSize: 13, color: '#666', marginLeft: 4 },
-  bloodRow: { flexDirection: 'row', alignItems: 'center' },
-  bloodText: { fontSize: 12, color: '#ff6b6b', fontWeight: '600', marginLeft: 4 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  loadingText: { marginTop: 16, fontSize: 14, color: '#666', fontWeight: '500' },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#444', marginTop: 16 },
-  emptySubtitle: { fontSize: 14, color: '#888', textAlign: 'center', marginTop: 8 },
-  welcomeTitle: { fontSize: 24, fontWeight: '800', color: '#ff6b6b', marginTop: 20 },
-  welcomeSubtitle: { fontSize: 15, color: '#888', textAlign: 'center', marginTop: 10, lineHeight: 22 },
+  textContainer: { marginLeft: 14, flex: 1 },
+  userName: { fontSize: 16, fontWeight: '700', color: '#0F172A', marginBottom: 3 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  locationText: { fontSize: 13, color: '#64748B', marginLeft: 4 },
+  bloodBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFEBEE',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  bloodBadgeText: { fontSize: 12, color: '#D32F2F', fontWeight: '700', marginLeft: 4 },
+  chevronCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 },
+  loadingText: { marginTop: 16, fontSize: 14, color: '#64748B', fontWeight: '600' },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#0F172A', marginTop: 16 },
+  emptySubtitle: { fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 6, lineHeight: 18 },
+  iconCircleBig: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#FFEBEE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  welcomeTitle: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
+  welcomeSubtitle: { fontSize: 14, color: '#64748B', textAlign: 'center', marginTop: 8, lineHeight: 20 },
 });

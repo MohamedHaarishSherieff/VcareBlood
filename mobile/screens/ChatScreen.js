@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import {
   View,
   StyleSheet,
@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator as RNActivityIndicator,
   Modal,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Avatar, useTheme, ActivityIndicator } from 'react-native-paper';
@@ -20,6 +21,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { LanguageContext } from '../context/LanguageContext';
 import { db, authentication } from '../firebase/config';
+import notificationService from '../services/notificationService';
 import {
   collection,
   query,
@@ -299,6 +301,15 @@ export default function ChatScreen({ route, navigation }) {
     return unsubscribe;
   }, [currentUserId, contact?.id]);
 
+  // WhatsApp style auto-scroll to bottom on new messages
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages]);
+
   useEffect(() => {
     if (!contact?.id) return;
 
@@ -317,9 +328,18 @@ export default function ChatScreen({ route, navigation }) {
     fetchContactDetails();
   }, [contact?.id]);
 
+  const handleMakeCall = (phoneNumber) => {
+    if (!phoneNumber) return;
+    const cleanPhone = phoneNumber.toString().replace(/\D/g, '');
+    Linking.openURL(`tel:${cleanPhone}`).catch(() => {
+      Alert.alert('Call', `Dialing ${phoneNumber}...`);
+    });
+  };
+
   const sendMessage = async () => {
     if (!text.trim() || !currentUserId || !contact?.id) return;
 
+    const messageContent = text.trim();
     const normalizedReceiverId = normalizeId(contact.id);
     const conversationId = getConversationId(currentUserId, normalizedReceiverId);
     const timestamp = Date.now();
@@ -327,7 +347,7 @@ export default function ChatScreen({ route, navigation }) {
       senderId: currentUserId,
       senderName: currentUserName,
       receiverId: normalizedReceiverId,
-      text: text.trim(),
+      text: messageContent,
       createdAt: serverTimestamp(),
       timestampText: new Date(timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
       participants: [currentUserId, normalizedReceiverId],
@@ -338,6 +358,9 @@ export default function ChatScreen({ route, navigation }) {
     console.log('ChatScreen: sendMessage called', payload);
 
     try {
+      setText('');
+      setIsTyping(false);
+
       const messageRef = await addDoc(collection(db, 'chats'), payload);
       await setDoc(
         doc(db, 'conversations', conversationId),
@@ -357,8 +380,16 @@ export default function ChatScreen({ route, navigation }) {
       );
 
       console.log('ChatScreen: message saved', messageRef.id, 'conversation updated', conversationId);
-      setText('');
-      setIsTyping(false);
+
+      // Trigger instant push notification to recipient device (works even if app is backgrounded or closed)
+      notificationService.sendChatPushNotification({
+        receiverId: normalizedReceiverId,
+        senderId: currentUserId,
+        senderName: currentUserName,
+        messageText: messageContent,
+        conversationId,
+      });
+
     } catch (err) {
       console.error('ChatScreen: send message failed', err);
       Alert.alert('Error', 'Failed to send message');
@@ -487,41 +518,42 @@ export default function ChatScreen({ route, navigation }) {
           contact?.avatar ? (
             <Avatar.Image size={32} source={{ uri: contact.avatar }} style={{ marginRight: 8 }} />
           ) : (
-            <Avatar.Text size={32} label={(contact?.name || '?').charAt(0)} style={{ backgroundColor: theme.colors.primary, marginRight: 8 }} />
+            <Avatar.Text size={32} label={(contact?.name || '?').charAt(0)} style={{ backgroundColor: '#D32F2F', marginRight: 8 }} />
           )
         )}
 
         <View style={[styles.bubbleWrapper, isMe && styles.bubbleWrapperRight]}>
           {!isMe && (
-            <Text style={[styles.senderName, { color: theme.colors.primary }]}> {item.senderName || contact.name || 'Unknown'}</Text>
+            <Text style={styles.senderName}>{item.senderName || contact.name || 'Unknown'}</Text>
           )}
 
           <View
             style={[
               styles.bubble,
-              {
-                backgroundColor: isMe ? theme.colors.primary : theme.colors.surface,
-                borderColor: !isMe ? theme.colors.outline : 'transparent',
-              },
+              isMe ? styles.sentBubble : styles.receivedBubble
             ]}
           >
-            <Text style={[styles.msgText, { color: isMe ? '#fff' : theme.colors.text }]}>{item.text}</Text>
+            <Text style={[styles.msgText, { color: '#111B21' }]}>{item.text}</Text>
             <View style={styles.messageFooter}>
-              <Text style={[styles.timestamp, { color: isMe ? 'rgba(255,255,255,0.8)' : '#888' }]}> 
+              <Text style={styles.timestamp}> 
                 {item.timestampText || (item.createdAt?.toDate ? item.createdAt.toDate().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '')}
               </Text>
               {isMe && (
                 <View style={styles.statusIndicator}>
-                  {item.status === 'read' && <MaterialCommunityIcons name="check-all" size={14} color="#4FC3F7" />}
-                  {item.status === 'delivered' && <MaterialCommunityIcons name="check-all" size={14} color="#fff" />}
-                  {(!item.status || item.status === 'sent') && <MaterialCommunityIcons name="check" size={14} color="#fff" />}
+                  {item.status === 'read' ? (
+                    <MaterialCommunityIcons name="check-all" size={16} color="#34B7F1" />
+                  ) : item.status === 'delivered' ? (
+                    <MaterialCommunityIcons name="check-all" size={16} color="#8696A0" />
+                  ) : (
+                    <MaterialCommunityIcons name="check" size={16} color="#8696A0" />
+                  )}
                 </View>
               )}
             </View>
           </View>
         </View>
 
-        {isMe && <View style={{ width: 32 }} />}
+        {isMe && <View style={{ width: 8 }} />}
       </View>
     );
   };
@@ -627,101 +659,106 @@ export default function ChatScreen({ route, navigation }) {
           </TouchableOpacity>
         </SafeAreaView>
       ) : (
-        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}> 
-        <View style={[styles.header, { borderBottomColor: theme.colors.outline, backgroundColor: theme.colors.surface }]}> 
-          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-            <TouchableOpacity onPress={() => navigation.navigate('Chat')} style={{ padding: 8 }}>
-              <MaterialCommunityIcons name="arrow-left" size={24} color={theme.colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onPress={() => navigation.navigate('UserProfile', { phoneNumber: contact.id })}
-              style={{ marginRight: 8 }}
-            >
-              {contact?.avatar ? (
-                <Avatar.Image size={36} source={{ uri: contact.avatar }} />
-              ) : (
-                <Avatar.Text size={36} label={(contact.name || '?').charAt(0)} style={{ backgroundColor: theme.colors.primary }} />
-              )}
-            </TouchableOpacity>
-            <View style={{ marginLeft: 12, flex: 1 }}>
-              <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 16 }}>
-                {contact.name}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                {contactDetails?.bloodGroup && (
-                  <Text style={{ color: theme.colors.placeholder, fontSize: 11, marginRight: 8 }}>
-                    🩸 {contactDetails.bloodGroup}
-                  </Text>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#D32F2F' }} edges={['top', 'left', 'right']}> 
+          <View style={styles.whatsappHeader}> 
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+              <TouchableOpacity onPress={() => navigation.navigate('Chat')} style={{ padding: 4, marginRight: 4 }}>
+                <MaterialCommunityIcons name="arrow-left" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('UserProfile', { phoneNumber: contact.id })}
+                style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+              >
+                {contact?.avatar ? (
+                  <Avatar.Image size={38} source={{ uri: contact.avatar }} />
+                ) : (
+                  <Avatar.Text size={38} label={(contact.name || '?').charAt(0)} style={{ backgroundColor: '#B71C1C' }} />
                 )}
-                {(contactDetails?.city || contactDetails?.state) && (
-                  <Text style={{ color: theme.colors.placeholder, fontSize: 11 }}>
-                    📍 {contactDetails.city || contactDetails.state}
+                <View style={{ marginLeft: 10, flex: 1 }}>
+                  <Text style={styles.whatsappHeaderName} numberOfLines={1}>
+                    {contact.name}
                   </Text>
-                )}
-              </View>
-              <Text style={{ color: theme.colors.placeholder, fontSize: 12, marginTop: 2 }}>
-                {isTyping ? t('typing') : t('activeNow')}
-              </Text>
+                  <Text style={styles.whatsappHeaderStatus}>
+                    {isTyping ? t('typing') || 'typing...' : 'online'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Action icons: Call, Video Call, Menu */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <TouchableOpacity onPress={() => handleMakeCall(contact.id)} style={{ padding: 4 }}>
+                <MaterialCommunityIcons name="phone" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleMakeCall(contact.id)} style={{ padding: 4 }}>
+                <MaterialCommunityIcons name="video" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedConversation({ contactId: contact.id, name: contact.name });
+                  setShowMenuModal(true);
+                }}
+                style={{ padding: 4 }}
+              >
+                <MaterialCommunityIcons name="dots-vertical" size={22} color="#FFFFFF" />
+              </TouchableOpacity>
             </View>
           </View>
-          {unreadCount > 0 && (
-            <View style={[styles.unreadBadge, { backgroundColor: theme.colors.error }]}> 
-              <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </Text>
+
+          <View style={{ flex: 1, backgroundColor: '#EFEAE2' }}>
+            <View style={styles.chatArea}>
+              <FlatList
+                ref={flatListRef}
+                data={messages}
+                keyExtractor={(item) => item.id}
+                renderItem={renderChatMessage}
+                style={styles.messageListWrapper}
+                contentContainerStyle={[styles.messageList, { paddingBottom: 100 }]}
+                onEndReachedThreshold={0.1}
+                ListEmptyComponent={
+                  <View style={styles.emptyChat}>
+                    <MaterialCommunityIcons name="message-outline" size={64} color="#64748B" />
+                    <Text style={{ color: '#64748B', marginTop: 12, fontSize: 16 }}>
+                      {t('noMessagesYet')}
+                    </Text>
+                  </View>
+                }
+              />
             </View>
-          )}
-        </View>
 
-        <View style={styles.chatArea}>
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            renderItem={renderChatMessage}
-            style={styles.messageListWrapper}
-            contentContainerStyle={[styles.messageList, { paddingBottom: 140 }]}
-            onEndReachedThreshold={0.1}
-            ListEmptyComponent={
-              <View style={styles.emptyChat}>
-                <MaterialCommunityIcons name="message-outline" size={64} color={theme.colors.placeholder} />
-                <Text style={{ color: theme.colors.placeholder, marginTop: 12, fontSize: 16 }}>
-                  {t('noMessagesYet')}
-                </Text>
-              </View>
-            }
-          />
-        </View>
-
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-          style={styles.composerWrapper}
-        >
-          <View style={[styles.composer, { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.outline }]}> 
-            <TextInput
-              style={[styles.input, { color: theme.colors.text, backgroundColor: theme.colors.background }]}
-              placeholder={t('typeAMessagePlaceholder')}
-              placeholderTextColor={theme.colors.placeholder}
-              value={text}
-              onChangeText={handleTextChange}
-              onSubmitEditing={sendMessage}
-              onKeyPress={handleKeyPress}
-              blurOnSubmit={false}
-              multiline
-              maxLength={5000}
-            />
-            <TouchableOpacity
-              onPress={sendMessage}
-              disabled={!text.trim()}
-              style={[styles.sendBtn, { backgroundColor: text.trim() ? theme.colors.primary : theme.colors.outline }]}
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+              style={styles.composerWrapper}
             >
-              <MaterialCommunityIcons name="send" size={20} color={text.trim() ? '#fff' : theme.colors.placeholder} />
-            </TouchableOpacity>
+              <View style={styles.whatsappComposer}> 
+                <TouchableOpacity style={{ padding: 6 }}>
+                  <MaterialCommunityIcons name="paperclip" size={22} color="#64748B" />
+                </TouchableOpacity>
+                <TextInput
+                  style={styles.whatsappInput}
+                  placeholder={t('typeAMessagePlaceholder') || 'Message'}
+                  placeholderTextColor="#64748B"
+                  value={text}
+                  onChangeText={handleTextChange}
+                  onSubmitEditing={sendMessage}
+                  onKeyPress={handleKeyPress}
+                  blurOnSubmit={false}
+                  multiline
+                  maxLength={5000}
+                />
+                <TouchableOpacity
+                  onPress={sendMessage}
+                  disabled={!text.trim()}
+                  style={[styles.sendBtn, { backgroundColor: text.trim() ? theme.colors.primary : theme.colors.outline }]}
+                >
+                  <MaterialCommunityIcons name="send" size={20} color={text.trim() ? '#fff' : theme.colors.placeholder} />
+                </TouchableOpacity>
+              </View>
+            </KeyboardAvoidingView>
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    )}
+        </SafeAreaView>
+      )}
 
       {/* Options Menu Modal */}
       <Modal
@@ -825,182 +862,251 @@ export default function ChatScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  whatsappHeader: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#D32F2F',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
-    elevation: 4,
+  },
+  whatsappHeaderName: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  whatsappHeaderStatus: {
+    color: '#FFCDD2',
+    fontSize: 12,
+    marginTop: 1,
+  },
+  header: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
   unreadBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FF6B6B',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: '#D32F2F',
   },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   floatingSearchButton: {
     position: 'absolute',
     right: 20,
-    top: '50%',
+    bottom: 30,
     width: 56,
     height: 56,
     borderRadius: 28,
+    backgroundColor: '#D32F2F',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#D32F2F',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowRadius: 10,
+    elevation: 6,
   },
   emptyChat: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingBottom: 100 },
-  chatCountRow: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#f4f4f4', marginBottom: 6 },
-  chatCountText: { color: '#555', fontSize: 14 },
+  chatCountRow: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#F1F5F9', marginBottom: 6 },
+  chatCountText: { color: '#64748B', fontSize: 13, fontWeight: '600' },
   conversationItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
   },
   conversationName: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#1a1a1a',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
   },
   conversationSnippet: {
-    fontSize: 14,
-    marginTop: 3,
-    color: '#666',
+    fontSize: 13,
+    marginTop: 2,
+    color: '#64748B',
   },
   conversationTime: {
-    fontSize: 12,
-    color: '#999',
-    fontWeight: '500',
+    fontSize: 11,
+    color: '#059669',
+    fontWeight: '600',
   },
   unreadBadgeSmall: {
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 10,
-    backgroundColor: '#FF6B6B',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-    minWidth: 24,
+    backgroundColor: '#D32F2F',
+    minWidth: 22,
     alignItems: 'center',
   },
   chatArea: { flex: 1 },
   messageListWrapper: { flex: 1 },
-  messageList: { padding: 16, paddingBottom: 140 },
-  msgRow: { flexDirection: 'row', marginVertical: 8, alignItems: 'flex-end' },
+  messageList: { paddingHorizontal: 12, paddingTop: 12, paddingBottom: 140 },
+  msgRow: { flexDirection: 'row', marginVertical: 4, alignItems: 'flex-end' },
   msgRowLeft: { justifyContent: 'flex-start' },
   msgRowRight: { justifyContent: 'flex-end' },
-  bubbleWrapper: { maxWidth: '80%' },
+  bubbleWrapper: { maxWidth: '82%' },
   bubbleWrapperRight: { alignItems: 'flex-end' },
   senderName: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 6,
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 2,
     marginLeft: 6,
-    color: '#007AFF',
+    color: '#D32F2F',
   },
   bubble: {
-    padding: 16,
-    borderRadius: 20,
-    borderWidth: 0.5,
-    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    minHeight: 36,
     justifyContent: 'center',
     maxWidth: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  sentBubble: {
+    backgroundColor: '#E7FFDB',
+    borderTopRightRadius: 2,
+    borderWidth: 1,
+    borderColor: '#D4F5C5',
+  },
+  receivedBubble: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 2,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   msgText: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: '400',
   },
   messageFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
     justifyContent: 'flex-end',
-    gap: 6,
+    gap: 4,
   },
   timestamp: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500',
+    color: '#667781',
   },
-  statusIndicator: { marginLeft: 4 },
+  statusIndicator: { marginLeft: 2 },
   composerWrapper: {
     position: 'relative',
     width: '100%',
     backgroundColor: 'transparent',
-    paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 16 : 10,
+    paddingHorizontal: 8,
+    paddingBottom: Platform.OS === 'ios' ? 16 : 8,
+  },
+  whatsappComposer: {
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 8,
+    borderRadius: 24,
+    marginBottom: 4,
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    elevation: 3,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+  },
+  whatsappInput: {
+    flex: 1,
+    minHeight: 38,
+    maxHeight: 120,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    fontSize: 15,
+    color: '#0F172A',
+    ...Platform.select({
+      web: { outlineStyle: 'none' },
+    }),
   },
   composer: {
     flexDirection: 'row',
-    padding: 12,
+    padding: 8,
     alignItems: 'flex-end',
-    borderTopWidth: 1,
-    gap: 12,
-    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 10,
+    borderRadius: 24,
     marginBottom: 8,
     width: '100%',
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
   input: {
     flex: 1,
-    minHeight: 44,
+    minHeight: 40,
     maxHeight: 120,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 22,
-    fontSize: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 18,
+    fontSize: 15,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
   },
   sendBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#D32F2F',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuContainer: {
-    borderRadius: 12,
+    borderRadius: 20,
     overflow: 'hidden',
-    minWidth: 200,
-    backgroundColor: '#fff',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    minWidth: 220,
+    backgroundColor: '#FFFFFF',
+    elevation: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
   },
   menuOption: {
     flexDirection: 'row',
@@ -1008,7 +1114,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#F1F5F9',
     gap: 12,
   },
   menuOptionLast: {
@@ -1019,8 +1125,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   menuText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1a1a1a',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
   },
 });

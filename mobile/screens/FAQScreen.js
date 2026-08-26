@@ -40,18 +40,18 @@ const faqList = [
 
 const FAQAccordionItem = ({ item, expanded, onToggle }) => (
   <View style={styles.accordionItem}>
-    <TouchableOpacity onPress={onToggle} style={styles.itemHeader} activeOpacity={0.85}>
+    <TouchableOpacity onPress={onToggle} style={[styles.itemHeader, expanded && styles.itemHeaderExpanded]} activeOpacity={0.85}>
       <Text style={[styles.question, expanded && styles.questionExpanded]}>{item.question}</Text>
       <MaterialCommunityIcons
         name={expanded ? 'chevron-up' : 'chevron-down'}
         size={22}
-        color={expanded ? '#0f7a5a' : '#999'}
+        color={expanded ? '#D32F2F' : '#94A3B8'}
       />
     </TouchableOpacity>
     {expanded && (
-      <Surface style={styles.expandedContent}>
+      <View style={styles.expandedContent}>
         <Text style={styles.expandedText}>{item.answer}</Text>
-      </Surface>
+      </View>
     )}
   </View>
 );
@@ -62,10 +62,10 @@ export default function FAQScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 120 }}>
-      <Surface style={styles.header}>
-        <Title style={styles.title}>FAQ</Title>
-        <Text style={styles.subtitle}>Find answers about blood donation and using the V-Care app.</Text>
-      </Surface>
+      <View style={styles.header}>
+        <Title style={styles.title}>Frequently Asked Questions</Title>
+        <Text style={styles.subtitle}>Find quick answers about blood donation & V-Care app features.</Text>
+      </View>
 
       <View style={styles.faqList}>
         {faqList.map((item, idx) => (
@@ -84,77 +84,80 @@ export default function FAQScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    padding: 20,
-    backgroundColor: 'rgb(211, 16, 16)',
-    elevation: 4,
+    padding: 24,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
     alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
   },
   title: {
-    color: '#fff',
+    color: '#0F172A',
     fontSize: 24,
-    marginBottom: 8,
-    fontWeight: 'bold',
+    marginBottom: 6,
+    fontWeight: '800',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    color: '#fff',
-    fontSize: 16,
-    marginBottom: 8,
+    color: '#64748B',
+    fontSize: 14,
     textAlign: 'center',
+    lineHeight: 20,
   },
   faqList: {
     padding: 16,
   },
-  faqItem: {
-    marginBottom: 16,
-    padding: 16,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    elevation: 2,
-  },
   question: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: 'rgb(211, 16, 16)',
-    marginBottom: 4,
-  },
-  divider: {
-    marginVertical: 6,
-  },
-  answer: {
+    fontWeight: '700',
     fontSize: 15,
-    color: '#333',
-    marginTop: 4,
-    lineHeight: 22,
+    color: '#0F172A',
+    flex: 1,
+    marginRight: 8,
   },
   accordionItem: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     elevation: 1,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+  },
+  itemHeaderExpanded: {
+    borderColor: '#FFCDD2',
+    backgroundColor: '#FFFFFF',
   },
   questionExpanded: {
-    color: '#0f7a5a',
+    color: '#D32F2F',
   },
   expandedContent: {
-    marginTop: 8,
-    padding: 12,
-    backgroundColor: '#e9f7ef',
-    borderRadius: 8,
-    elevation: 0,
+    marginTop: 6,
+    padding: 16,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#FFCDD2',
   },
   expandedText: {
-    color: '#0f4f3a',
-    lineHeight: 20,
-    fontSize: 15,
+    color: '#334155',
+    lineHeight: 22,
+    fontSize: 14,
   },
 });

@@ -31,10 +31,21 @@ const TermsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { padding: 16, paddingBottom: 120 },
-  surface: { padding: 16, borderRadius: 8 },
-  title: { textAlign: 'center', marginBottom: 12 },
-  paragraph: { marginBottom: 10, color: '#333', lineHeight: 20 },
+  container: { padding: 16, paddingBottom: 120, backgroundColor: '#F8FAFC', flexGrow: 1 },
+  surface: {
+    padding: 24,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+  },
+  title: { textAlign: 'center', marginBottom: 16, fontSize: 22, fontWeight: '800', color: '#D32F2F', letterSpacing: -0.3 },
+  paragraph: { marginBottom: 12, color: '#334155', lineHeight: 22, fontSize: 14 },
 });
 
 export default TermsScreen;
