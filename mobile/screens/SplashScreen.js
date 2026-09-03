@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Text, Image } from 'react-native';
-
+import { View, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '../firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
@@ -15,7 +14,6 @@ const SplashScreen = ({ navigation }) => {
           const mobileDocRef = doc(db, 'Mobile_Numbers', phone);
           const mobileSnap = await getDoc(mobileDocRef);
           if (!mobileSnap.exists() || !mobileSnap.data()?.hasAccount) {
-            // Incomplete registration or non-existent account - clear stored phone
             await AsyncStorage.removeItem('userPhoneNumber');
           }
         }
@@ -40,7 +38,10 @@ const SplashScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+      <View style={styles.logoWrapper}>
+        <Image source={require('../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+      </View>
+      <ActivityIndicator size="large" color="#D32F2F" style={styles.loader} />
     </View>
   );
 };
@@ -50,24 +51,29 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 20,
+    backgroundColor: '#F8FAFC',
+    padding: 24,
+  },
+  logoWrapper: {
+    backgroundColor: '#FFFFFF',
+    padding: 24,
+    borderRadius: 32,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 4,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   logo: {
-    width: 400,
-    height: 400,
-    marginBottom: 24,
+    width: 260,
+    height: 120,
   },
-  title: {
-    fontSize: 42,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 8,
+  loader: {
+    marginTop: 12,
   },
-  subtitle: {
-    fontSize: 18,
-    color: '#fff',
-  }
 });
 
 export default SplashScreen;

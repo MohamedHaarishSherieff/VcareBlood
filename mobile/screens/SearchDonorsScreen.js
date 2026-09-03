@@ -5,11 +5,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { donorService } from '../services/donorService';
 import { statesWithDistricts } from '../data/states-districts';
 import { LanguageContext } from '../context/LanguageContext';
+import { useTabBar } from '../context/TabBarContext';
 
 const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const states = ['All', ...Object.keys(statesWithDistricts)];
 
 export default function SearchDonorsScreen({ route, navigation }) {
+  const { handleScroll } = useTabBar();
   const theme = useTheme();
   const { t } = useContext(LanguageContext);
 
@@ -70,29 +72,27 @@ export default function SearchDonorsScreen({ route, navigation }) {
       <Card.Content style={styles.cardContent}>
         <View style={styles.donorInfo}>
           {item.profilePhoto ? (
-            <Avatar.Image size={50} source={{ uri: item.profilePhoto }} />
+            <Avatar.Image size={52} source={{ uri: item.profilePhoto }} />
           ) : (
-            <Avatar.Icon size={50} icon="account" style={{ backgroundColor: '#f0f0f0' }} color="#888" />
+            <Avatar.Icon size={52} icon="account" style={{ backgroundColor: '#F1F5F9' }} color="#64748B" />
           )}
           <View style={styles.textContainer}>
             <Text style={styles.donorName}>{item.name || 'Anonymous'}</Text>
             <View style={styles.locationRow}>
-              <MaterialCommunityIcons name="map-marker" size={14} color="#666" />
+              <MaterialCommunityIcons name="map-marker" size={15} color="#64748B" />
               <Text style={styles.locationText}>
                 {item.city ? `${item.city}, ${item.state}` : item.state || 'Location not set'}
               </Text>
             </View>
-            <View style={styles.bloodRow}>
-              <MaterialCommunityIcons name="water" size={14} color="#ff6b6b" />
-              <Text style={styles.bloodText}>Blood Group: {item.bloodGroup || 'Not set'}</Text>
+            <View style={styles.bloodBadge}>
+              <MaterialCommunityIcons name="water" size={14} color="#D32F2F" />
+              <Text style={styles.bloodBadgeText}>{item.bloodGroup || 'Group unset'}</Text>
             </View>
           </View>
         </View>
-        <IconButton
-          icon="chevron-right"
-          iconColor={theme.colors.primary}
-          size={24}
-        />
+        <View style={styles.chevronCircle}>
+          <MaterialCommunityIcons name="chevron-right" size={20} color="#64748B" />
+        </View>
       </Card.Content>
     </Card>
   );
@@ -108,13 +108,15 @@ export default function SearchDonorsScreen({ route, navigation }) {
         value={value}
         mode="outlined"
         style={styles.input}
+        outlineColor="#E2E8F0"
+        activeOutlineColor="#D32F2F"
         placeholder={`Select ${label.toLowerCase()}`}
         editable={false}
         disabled={disabled}
         right={
           <TextInput.Icon
             icon={() => (
-              <MaterialCommunityIcons name="chevron-down" size={24} color="#555" />
+              <MaterialCommunityIcons name="chevron-down" size={22} color="#64748B" />
             )}
             onPress={() => !disabled && setSelectedDropdown(type)}
             forceTextInputFocus={false}
@@ -173,11 +175,12 @@ export default function SearchDonorsScreen({ route, navigation }) {
             renderItem={({ item }) => (
               <List.Item
                 title={item}
+                titleStyle={{ fontSize: 15, fontWeight: '600', color: '#0F172A' }}
                 onPress={() => onSelect(item)}
                 style={styles.listItem}
               />
             )}
-            ItemSeparatorComponent={() => <Divider />}
+            ItemSeparatorComponent={() => <Divider style={{ backgroundColor: '#F1F5F9' }} />}
           />
         </Modal>
       </Portal>
@@ -185,8 +188,8 @@ export default function SearchDonorsScreen({ route, navigation }) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Surface style={[styles.searchContainer, { backgroundColor: theme.colors.surface }]}>
+    <View style={[styles.container, { backgroundColor: '#F8FAFC' }]}>
+      <Surface style={styles.searchContainer}>
         <View style={styles.inputContainer}>
           {renderDropdownButton(t('bloodGroup'), searchQuery.bloodGroup, 'bloodGroup')}
         </View>
@@ -206,31 +209,36 @@ export default function SearchDonorsScreen({ route, navigation }) {
 
         {renderDropdownModal()}
 
-        <Button
-          mode="contained"
-          onPress={handleSearch}
+        <TouchableOpacity
           style={styles.searchButton}
-          labelStyle={{ color: '#fff' }}
+          activeOpacity={0.85}
+          onPress={handleSearch}
         >
-          {t('searchDonors')}
-        </Button>
+          <MaterialCommunityIcons name="magnify" size={20} color="#FFFFFF" />
+          <Text style={styles.searchButtonText}>{t('searchDonors')}</Text>
+        </TouchableOpacity>
       </Surface>
 
       {loading ? (
-        <ActivityIndicator size="large" color="rgb(211, 16, 16)" style={styles.loader} />
+        <ActivityIndicator size="large" color="#D32F2F" style={styles.loader} />
       ) : (
         <FlatList
           data={donors}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           renderItem={renderDonorCard}
           keyExtractor={(item) => item.phoneNumber || item.id || Math.random().toString()}
           style={styles.list}
           contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]}
           ListEmptyComponent={
-            <Paragraph style={styles.emptyText}>
-              {searchQuery.bloodGroup || searchQuery.city || searchQuery.state
-                ? t('noDonorsFound')
-                : t('searchDonorsMessage')}
-            </Paragraph>
+            <View style={styles.emptyContainer}>
+              <MaterialCommunityIcons name="water-off-outline" size={64} color="#CBD5E1" />
+              <Paragraph style={styles.emptyText}>
+                {searchQuery.bloodGroup || searchQuery.city || searchQuery.state
+                  ? t('noDonorsFound')
+                  : t('searchDonorsMessage')}
+              </Paragraph>
+            </View>
           }
         />
       )}
@@ -241,72 +249,97 @@ export default function SearchDonorsScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: '#F8FAFC',
   },
   searchContainer: {
     padding: 16,
-    backgroundColor: '#fff',
-    elevation: 4,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 2px 3.84px rgba(0,0,0,0.25)' }
-      : {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 3.84,
-        }),
+    backgroundColor: '#FFFFFF',
+    margin: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
   },
   inputContainer: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   dropdownButton: {
     width: '100%',
   },
   input: {
     width: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
+    fontSize: 14,
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: '#FFFFFF',
     margin: 20,
-    borderRadius: 8,
-    maxHeight: '80%',
+    borderRadius: 20,
+    maxHeight: '75%',
+    paddingBottom: 8,
   },
   modalTitle: {
-    padding: 16,
+    padding: 18,
     textAlign: 'center',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#0F172A',
   },
   divider: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#E2E8F0',
   },
   listItem: {
-    paddingVertical: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   searchButton: {
-    marginTop: 8,
-    backgroundColor: 'rgb(211, 16, 16)',
+    marginTop: 6,
+    backgroundColor: '#D32F2F',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
+    elevation: 3,
+    shadowColor: '#D32F2F',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  searchButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    marginLeft: 8,
   },
   list: {
     flex: 1,
   },
   listContent: {
-    padding: 16,
+    paddingHorizontal: 16,
   },
   card: {
     marginBottom: 12,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    elevation: 3,
-    shadowColor: '#000',
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    elevation: 1,
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
   },
   cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   donorInfo: { 
     flexDirection: 'row', 
@@ -314,43 +347,64 @@ const styles = StyleSheet.create({
     flex: 1 
   },
   textContainer: { 
-    marginLeft: 12, 
+    marginLeft: 14, 
     flex: 1 
   },
   donorName: { 
-    fontSize: 17, 
+    fontSize: 16, 
     fontWeight: '700', 
-    color: '#2C3E50', 
-    marginBottom: 2 
+    color: '#0F172A', 
+    marginBottom: 3 
   },
   locationRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    marginBottom: 2 
+    marginBottom: 6 
   },
   locationText: { 
     fontSize: 13, 
-    color: '#666', 
+    color: '#64748B', 
     marginLeft: 4 
   },
-  bloodRow: { 
+  bloodBadge: { 
     flexDirection: 'row', 
-    alignItems: 'center' 
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFEBEE',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
-  bloodText: { 
+  bloodBadgeText: { 
     fontSize: 12, 
-    color: '#ff6b6b', 
-    fontWeight: '600', 
+    color: '#D32F2F', 
+    fontWeight: '700', 
     marginLeft: 4 
+  },
+  chevronCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loader: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 48,
+    paddingHorizontal: 24,
+  },
   emptyText: {
     textAlign: 'center',
-    marginTop: 24,
-    opacity: 0.7,
+    marginTop: 16,
+    color: '#64748B',
+    fontSize: 14,
+    lineHeight: 20,
   }
 });

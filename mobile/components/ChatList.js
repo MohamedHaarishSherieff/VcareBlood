@@ -327,7 +327,7 @@ export default function ChatList({ navigation }) {
 
   if (isLoggedIn === null || loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center' }]}> 
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center' }]} edges={['bottom', 'left', 'right']}> 
         <ActivityIndicator size="large" color={theme.colors.primary} />
       </SafeAreaView>
     );
@@ -335,7 +335,7 @@ export default function ChatList({ navigation }) {
 
   if (hasError) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]} edges={['bottom', 'left', 'right']}>
         <MaterialCommunityIcons name="wifi-off" size={64} color="#ff6b6b" style={{ marginBottom: 16 }} />
         <Text style={{ color: theme.colors.text, fontSize: 16, textAlign: 'center', marginBottom: 24, lineHeight: 22 }}>
           {errorMessage || 'Unable to load conversations. Please check your network connection.'}
@@ -352,7 +352,7 @@ export default function ChatList({ navigation }) {
 
   if (!isLoggedIn) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center' }]}> 
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background, justifyContent: 'center', alignItems: 'center' }]} edges={['bottom', 'left', 'right']}> 
         <Text style={{ color: theme.colors.text, fontSize: 18, marginBottom: 20, textAlign: 'center' }}>
           {t('registerToAccessChats')}
         </Text>
@@ -364,7 +364,7 @@ export default function ChatList({ navigation }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}> 
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom', 'left', 'right']}> 
       <FlatList
         data={conversations}
         keyExtractor={(item) => item.id}

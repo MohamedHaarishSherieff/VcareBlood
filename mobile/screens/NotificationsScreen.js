@@ -159,6 +159,29 @@ export default function NotificationsScreen({ navigation }) {
       );
     }
 
+    if (item.type === 'chat') {
+      return (
+        <Card
+          style={styles.card}
+          key={item.id}
+          onPress={() =>
+            navigation.navigate('ChatScreen', {
+              contact: {
+                id: item.senderId,
+                name: item.senderName,
+              },
+            })
+          }
+        >
+          <Card.Title
+            title={item.senderName || 'New Message'}
+            subtitle={`${item.body || 'Sent a message'} • ${when}`}
+            left={(props) => <Avatar.Text {...props} label={(item.senderName || '?').charAt(0)} style={{ backgroundColor: '#D32F2F' }} />}
+          />
+        </Card>
+      );
+    }
+
     // fallback
     return (
       <Card style={styles.card} key={item.id}>
@@ -204,7 +227,20 @@ export default function NotificationsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  card: { margin: 8 },
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  card: {
+    marginHorizontal: 16,
+    marginVertical: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    overflow: 'hidden',
+  },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, marginTop: 60 },
 });

@@ -25,6 +25,7 @@ import { db } from '../firebase/config';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import storageService from '../services/storageService';
 import postService from '../services/postService';
+import { useTabBar } from '../context/TabBarContext';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -79,6 +80,7 @@ const DropdownField = ({ label, items, value, onSelect, field, isOpen, setIsOpen
 };
 
 export default function ProfileScreen({ route, navigation }) {
+  const { handleScroll } = useTabBar();
   const theme = useTheme();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -400,7 +402,7 @@ export default function ProfileScreen({ route, navigation }) {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom', 'left', 'right']}>
         <ActivityIndicator animating={true} size="large" color={theme.colors.primary} />
       </SafeAreaView>
     );
@@ -408,7 +410,7 @@ export default function ProfileScreen({ route, navigation }) {
 
   if (!profile) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['bottom', 'left', 'right']}>
         <View style={styles.emptyContainer}>
           <Text style={{ color: theme.colors.text, fontSize: 16, marginBottom: 16 }}>No profile found. Please register first.</Text>
           <Button mode="contained" onPress={() => navigation.navigate('Register')}>Go to Register</Button>
@@ -418,16 +420,21 @@ export default function ProfileScreen({ route, navigation }) {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={[styles.container, { backgroundColor: '#F8FAFC' }]} edges={['bottom', 'left', 'right']}>
+      <ScrollView
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
+        showsVerticalScrollIndicator={false}
+      >
 
-        <View style={{ width: '100%', alignItems: 'flex-end', paddingRight: 4, paddingTop: 4 }}>
+        <View style={{ width: '100%', alignItems: 'flex-end', paddingRight: 16, paddingTop: 8 }}>
           <Menu
             visible={menuVisible}
             onDismiss={() => setMenuVisible(false)}
             anchor={
-              <TouchableOpacity style={{ padding: 8 }} onPress={() => setMenuVisible(true)}>
-                <MaterialCommunityIcons name="dots-vertical" size={24} color="#555" />
+              <TouchableOpacity style={styles.menuIconCircle} onPress={() => setMenuVisible(true)}>
+                <MaterialCommunityIcons name="dots-vertical" size={22} color="#0F172A" />
               </TouchableOpacity>
             }
           >
@@ -436,73 +443,108 @@ export default function ProfileScreen({ route, navigation }) {
                 <Menu.Item onPress={() => { setMenuVisible(false); handleEditProfile(); }} title="Edit Profile" />
                 <Menu.Item onPress={() => { setMenuVisible(false); navigation.navigate('DonateAmount'); }} title="Donate" />
                 <Menu.Item onPress={() => { setMenuVisible(false); navigation.navigate('Settings'); }} title="Settings" />
-                <Divider />
-                <Menu.Item onPress={() => { setMenuVisible(false); handleLogout(); }} title="Logout" />
+                <Divider style={{ backgroundColor: '#F1F5F9' }} />
+                <Menu.Item onPress={() => { setMenuVisible(false); handleLogout(); }} title="Logout" titleStyle={{ color: '#D32F2F', fontWeight: '700' }} />
               </>
             )}
             {!isOwnProfile && (
               <>
                 <Menu.Item onPress={() => { setMenuVisible(false); handleShareUserProfile(); }} title="Share Profile" />
                 <Menu.Item onPress={() => { setMenuVisible(false); handleBlockUser(); }} title="Block User" />
-                <Divider />
-                <Menu.Item onPress={() => { setMenuVisible(false); Alert.alert('Report', 'User reported.'); }} title="Report User" />
+                <Divider style={{ backgroundColor: '#F1F5F9' }} />
+                <Menu.Item onPress={() => { setMenuVisible(false); Alert.alert('Report', 'User reported.'); }} title="Report User" titleStyle={{ color: '#D32F2F' }} />
               </>
             )}
           </Menu>
         </View>
-        <View style={styles.profileSection}>
-          <View style={styles.avatarContainer}>
-            {profile.profilePhoto ? (
-              <Image source={{ uri: profile.profilePhoto }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarCircle}><MaterialCommunityIcons name="account" size={54} color="#888" /></View>
-            )}
-          </View>
 
-          <View style={styles.infoColumn}>
-            <Text style={[styles.profileName, { color: theme.colors.text }]}>
-              {profile.name || profile.username || `+91 ${profile.phoneNumber}`}
-            </Text>
-            <Text style={[styles.profileDetail, { color: theme.colors.text }]}>
-              {profile.bloodGroup ? `Blood Group: ${profile.bloodGroup}` : 'Blood Group: Not set'}
-            </Text>
-            <Text style={[styles.profileDetail, { color: theme.colors.text }]}>
-              {profile.city ? `City: ${profile.city}` : profile.state ? `State: ${profile.state}` : 'City: Not set'}
-            </Text>
-            {!profile.hidePhoneNumber && (
-              <Text style={[styles.profileDetail, { color: theme.colors.text }]}>+91 {profile.phoneNumber}</Text>
-            )}
-            <Text style={[styles.profileBio, { color: theme.colors.text }]}>{profile.bio || 'Bio: Not set'}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-              <Text style={[styles.profileDetail, { color: profile.availability === 'on' ? '#29a745' : '#dc3545', fontWeight: '700', marginRight: 12 }]}>Donation Availability: {profile.availability === 'on' ? 'Available' : 'Not Available'}</Text>
-              {isOwnProfile && (
-                <Switch
-                  value={profile.availability === 'on'}
-                  onValueChange={toggleAvailability}
-                  thumbColor={profile.availability === 'on' ? '#ffffff' : '#ffffff'}
-                  trackColor={{ false: '#dc3545', true: '#29a745' }}
-                />
+        {/* Profile Glass Card */}
+        <View style={styles.profileGlassCard}>
+          <View style={styles.profileSection}>
+            <View style={styles.avatarContainer}>
+              {profile.profilePhoto ? (
+                <Image source={{ uri: profile.profilePhoto }} style={styles.avatar} />
+              ) : (
+                <View style={styles.avatarCircle}>
+                  <MaterialCommunityIcons name="account" size={54} color="#64748B" />
+                </View>
               )}
             </View>
-            <View style={styles.buttonRow}>
-              {!isOwnProfile && (
-                <Button 
-                  mode="contained" 
-                  onPress={handleProfileChat} 
-                  style={{ backgroundColor: '#4CAF50', marginRight: 8 }}
-                >
-                  Chat
-                </Button>
+
+            <View style={styles.infoColumn}>
+              <Text style={styles.profileName}>
+                {profile.name || profile.username || `+91 ${profile.phoneNumber}`}
+              </Text>
+              
+              <View style={styles.bloodBadgeRow}>
+                <MaterialCommunityIcons name="water" size={14} color="#D32F2F" />
+                <Text style={styles.bloodBadgeText}>
+                  {profile.bloodGroup ? profile.bloodGroup : 'Not set'}
+                </Text>
+              </View>
+
+              <View style={styles.locationRow}>
+                <MaterialCommunityIcons name="map-marker-outline" size={14} color="#64748B" />
+                <Text style={styles.locationText}>
+                  {profile.city ? `${profile.city}, ${profile.state}` : profile.state ? profile.state : 'Location unset'}
+                </Text>
+              </View>
+
+              {!profile.hidePhoneNumber && (
+                <Text style={styles.phoneText}>+91 {profile.phoneNumber}</Text>
               )}
-              {isOwnProfile && (
-                <Button mode="outlined" onPress={handleShareProfile} style={styles.actionButton}>Share</Button>
-              )}
+              
+              {profile.bio && <Text style={styles.profileBio}>{profile.bio}</Text>}
+
+              <View style={styles.availabilityRow}>
+                <View style={[
+                  styles.statusPill,
+                  { backgroundColor: profile.availability === 'on' ? '#ECFDF5' : '#FFEBEE' }
+                ]}>
+                  <View style={[
+                    styles.statusDot,
+                    { backgroundColor: profile.availability === 'on' ? '#10B981' : '#D32F2F' }
+                  ]} />
+                  <Text style={[
+                    styles.statusPillText,
+                    { color: profile.availability === 'on' ? '#047857' : '#D32F2F' }
+                  ]}>
+                    {profile.availability === 'on' ? 'Available to Donate' : 'Unavailable'}
+                  </Text>
+                </View>
+                {isOwnProfile && (
+                  <Switch
+                    value={profile.availability === 'on'}
+                    onValueChange={toggleAvailability}
+                    thumbColor="#FFFFFF"
+                    trackColor={{ false: '#CBD5E1', true: '#10B981' }}
+                  />
+                )}
+              </View>
+
+              <View style={styles.buttonRow}>
+                {!isOwnProfile && (
+                  <TouchableOpacity 
+                    style={styles.chatButton}
+                    onPress={handleProfileChat}
+                  >
+                    <MaterialCommunityIcons name="chat" size={18} color="#FFFFFF" />
+                    <Text style={styles.chatButtonText}>Direct Chat</Text>
+                  </TouchableOpacity>
+                )}
+                {isOwnProfile && (
+                  <TouchableOpacity style={styles.actionButton} onPress={handleShareProfile}>
+                    <MaterialCommunityIcons name="share-variant-outline" size={18} color="#1E3A8A" />
+                    <Text style={styles.actionButtonText}>Share Profile</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           </View>
         </View>
 
         <View style={styles.postsSection}>
-          <Text style={styles.postsTitle}>Posts</Text>
+          <Text style={styles.postsTitle}>User Posts</Text>
           {posts.length > 0 ? (
             <View style={styles.feedContainer}>
               {posts.map(item => (
@@ -513,7 +555,7 @@ export default function ProfileScreen({ route, navigation }) {
                         <Image source={{ uri: item.authorPhoto }} style={styles.miniAvatar} />
                       ) : (
                         <View style={styles.miniAvatar}>
-                          <MaterialCommunityIcons name="account" size={18} color="#888" />
+                          <MaterialCommunityIcons name="account" size={18} color="#64748B" />
                         </View>
                       )}
                       <Text style={styles.postCardName}>{profile.name || 'User'}</Text>
@@ -524,7 +566,7 @@ export default function ProfileScreen({ route, navigation }) {
                         onDismiss={() => setActivePostMenu(null)}
                         anchor={
                           <TouchableOpacity onPress={() => setActivePostMenu(item.id)}>
-                            <MaterialCommunityIcons name="dots-vertical" size={20} color="#657786" />
+                            <MaterialCommunityIcons name="dots-vertical" size={20} color="#64748B" />
                           </TouchableOpacity>
                         }
                       >
@@ -534,28 +576,31 @@ export default function ProfileScreen({ route, navigation }) {
                             handleDeletePost(item.id);
                           }}
                           title="Delete Post"
-                          titleStyle={{ color: '#ff4444' }}
+                          titleStyle={{ color: '#D32F2F', fontWeight: '700' }}
                           leadingIcon="delete"
                         />
                       </Menu>
                     )}
                   </View>
                   {item.imageUrl && (
-                    <Image source={{ uri: item.imageUrl }} style={styles.postCardImage} resizeMode="contain" />
+                    <Image source={{ uri: item.imageUrl }} style={styles.postCardImage} resizeMode="cover" />
                   )}
                   {item.text && (
                     <Text style={styles.postCardText}>{item.text}</Text>
                   )}
                   <View style={styles.postCardActions}>
                     <TouchableOpacity style={styles.iconBtn} onPress={() => handleSharePost(item)}>
-                      <MaterialCommunityIcons name="send-outline" size={20} color="#657786" />
+                      <MaterialCommunityIcons name="share-variant-outline" size={20} color="#64748B" />
                     </TouchableOpacity>
                   </View>
                 </View>
               ))}
             </View>
           ) : (
-            <Text style={{ textAlign: 'center', marginTop: 30, color: '#666' }}>No posts yet.</Text>
+            <View style={styles.emptyPostsContainer}>
+              <MaterialCommunityIcons name="post-outline" size={48} color="#CBD5E1" />
+              <Text style={{ textAlign: 'center', marginTop: 12, color: '#64748B', fontSize: 14 }}>No posts published yet.</Text>
+            </View>
           )}
         </View>
 
@@ -565,82 +610,155 @@ export default function ProfileScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
-  scrollContent: { paddingBottom: 140 },
-  profileSection: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 20, alignItems: 'flex-start' },
-  avatarContainer: { marginRight: 20 },
-  avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#f0f0f0' },
-  avatarCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#f0f0f0', alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
+  scrollContent: { paddingBottom: 120 },
+  menuIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  profileGlassCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    elevation: 2,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+  },
+  profileSection: { flexDirection: 'row', alignItems: 'flex-start' },
+  avatarContainer: { marginRight: 16 },
+  avatar: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#F1F5F9' },
+  avatarCircle: { width: 90, height: 90, borderRadius: 45, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
   infoColumn: { flex: 1, justifyContent: 'center' },
-  profileName: { fontSize: 20, fontWeight: '700', marginBottom: 4 },
-  profileDetail: { fontSize: 14, fontWeight: '500', marginBottom: 2 },
-  profileBio: { fontSize: 14, fontWeight: '400', marginTop: 8, color: '#666' },
-  buttonRow: { flexDirection: 'row', justifyContent: 'flex-start', flexWrap: 'wrap', marginTop: 12 },
-  actionButton: { minWidth: 110, flex: 0, height: 36, justifyContent: 'center', marginRight: 8 },
-  primaryActionButton: { marginRight: 8 },
+  profileName: { fontSize: 20, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
+  bloodBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFEBEE',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginBottom: 6,
+  },
+  bloodBadgeText: { fontSize: 12, fontWeight: '700', color: '#D32F2F', marginLeft: 4 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  locationText: { fontSize: 13, color: '#64748B', marginLeft: 4 },
+  phoneText: { fontSize: 13, fontWeight: '600', color: '#0F172A', marginBottom: 4 },
+  profileBio: { fontSize: 13, fontWeight: '400', marginTop: 4, color: '#475569', lineHeight: 18 },
+  availabilityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12 },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusDot: { width: 7, height: 7, borderRadius: 4, marginRight: 6 },
+  statusPillText: { fontSize: 11, fontWeight: '700' },
+  buttonRow: { flexDirection: 'row', justifyContent: 'flex-start', flexWrap: 'wrap', marginTop: 16 },
+  chatButton: {
+    backgroundColor: '#059669',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  chatButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700', marginLeft: 6 },
+  actionButton: {
+    backgroundColor: '#EFF6FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  actionButtonText: { color: '#1E3A8A', fontSize: 13, fontWeight: '700', marginLeft: 6 },
 
-  // ── Posts Section (List View) ──
-  postsSection: { marginTop: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0', paddingTop: 16 },
-  postsTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12, paddingHorizontal: 20 },
-  feedContainer: { paddingHorizontal: 0 },
+  postsSection: { marginTop: 24, paddingHorizontal: 16 },
+  postsTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 14 },
+  feedContainer: {},
   postCard: {
     width: '100%',
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    paddingHorizontal: 0,
-    marginBottom: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    elevation: 1,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
   },
   postCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    marginBottom: 6,
+    marginBottom: 10,
   },
   miniAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#f5f5f5',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   postCardName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#14171A',
+    fontWeight: '700',
+    color: '#0F172A',
   },
   postCardImage: {
     width: '100%',
-    height: 320,
-    backgroundColor: '#f9f9f9',
-    marginVertical: 0,
+    height: 240,
+    borderRadius: 14,
+    marginVertical: 8,
   },
   postCardText: {
-    fontSize: 15,
-    color: '#14171A',
-    lineHeight: 22,
-    paddingHorizontal: 18,
-    marginTop: 8,
+    fontSize: 14,
+    color: '#334155',
+    lineHeight: 20,
+    marginTop: 4,
   },
   postCardActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    paddingHorizontal: 12,
     marginTop: 8,
   },
-  iconBtn: { padding: 8 },
+  iconBtn: { padding: 4 },
+  emptyPostsContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+  },
 
-  // (Remaining styles reused or removed)
   dropdownContainer: { position: 'relative', zIndex: 10 },
-  dropdownButton: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: '#ff6b6b', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: '#fff', justifyContent: 'space-between' },
+  dropdownButton: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#D32F2F', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: '#FFF', justifyContent: 'space-between' },
   dropdownButtonActive: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
-  dropdownButtonText: { fontSize: 16, fontWeight: '600', color: '#333', flex: 1 },
-  placeholderText: { color: '#bbb' },
-  dropdownList: { borderWidth: 2, borderTopWidth: 0, borderColor: '#ff6b6b', borderBottomLeftRadius: 14, borderBottomRightRadius: 14, backgroundColor: '#fff', maxHeight: 200 },
-  dropdownItem: { paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  dropdownItemText: { fontSize: 15, color: '#666', fontWeight: '500' },
-  dropdownItemSelected: { color: '#ff6b6b', fontWeight: '700' },
+  dropdownButtonText: { fontSize: 15, fontWeight: '600', color: '#0F172A', flex: 1 },
+  placeholderText: { color: '#94A3B8' },
+  dropdownList: { borderWidth: 1.5, borderTopWidth: 0, borderColor: '#D32F2F', borderBottomLeftRadius: 14, borderBottomRightRadius: 14, backgroundColor: '#FFF', maxHeight: 200 },
+  dropdownItem: { paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+  dropdownItemText: { fontSize: 14, color: '#475569', fontWeight: '500' },
+  dropdownItemSelected: { color: '#D32F2F', fontWeight: '700' },
 });

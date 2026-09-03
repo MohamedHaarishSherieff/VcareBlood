@@ -1,6 +1,7 @@
 import React, { createContext } from 'react';
 import { Provider as PaperProvider, adaptNavigationTheme, MD3LightTheme } from 'react-native-paper';
 import { NavigationContainer, DefaultTheme as NavigationDefaultTheme } from '@react-navigation/native';
+import themeTokens, { COLORS, SHADOWS, RADIUS, SPACING, TYPOGRAPHY } from '../theme';
 
 export const ThemeContext = createContext();
 
@@ -12,16 +13,19 @@ const { LightTheme } = adaptNavigationTheme({
 const AppTheme = {
   ...MD3LightTheme,
   ...LightTheme,
+  ...themeTokens,
   colors: {
     ...MD3LightTheme.colors,
     ...LightTheme.colors,
-    primary: 'rgb(211, 16, 16)',
-    background: '#ffffff',
-    surface: '#ffffff',
-    text: '#000000',
-    secondaryContainer: '#f5f5f5',
-    surfaceVariant: '#f0f0f0',
-    outline: '#e0e0e0',
+    ...COLORS,
+    elevation: {
+      level0: 'transparent',
+      level1: '#FFFFFF',
+      level2: '#FFFFFF',
+      level3: '#FFFFFF',
+      level4: '#FFFFFF',
+      level5: '#FFFFFF',
+    },
   },
 };
 
