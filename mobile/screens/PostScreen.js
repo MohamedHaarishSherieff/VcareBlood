@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
+import { LanguageContext } from '../context/LanguageContext';
 import { useTheme, Menu, Divider } from 'react-native-paper';
 import {
   View,
@@ -50,6 +51,7 @@ const formatTimeAgo = (dateInput) => {
 
 export default function PostScreen({ route, navigation }) {
   const { handleScroll } = useTabBar();
+  const { t } = useContext(LanguageContext);
   const [postText, setPostText] = useState('');
   const [postImage, setPostImage] = useState(null);
   const [loading, setLoading] = useState(false);

@@ -61,6 +61,58 @@ export default function ChatScreen({ route, navigation }) {
 
   const CHAT_RETENTION_MS = 24 * 60 * 60 * 1000;
 
+  // Real-time listener for the other user's typing indicator
+  useEffect(() => {
+    if (!currentUserId || !contact?.id) return;
+    const normalizedContactId = normalizeId(contact.id);
+    const conversationId = getConversationId(currentUserId, normalizedContactId);
+    const convDocRef = doc(db, 'conversations', conversationId);
+
+    const unsubscribe = onSnapshot(convDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const typingMap = data?.typing || {};
+        setIsOtherUserTyping(Boolean(typingMap[normalizedContactId]));
+      } else {
+        setIsOtherUserTyping(false);
+      }
+    }, (err) => {
+      console.warn('ChatScreen: typing listener notice', err);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [currentUserId, contact?.id]);
+
+  // Clean up typing status on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeout) clearTimeout(typingTimeout);
+      updateTypingStatus(false);
+    };
+  }, [currentUserId, contact?.id]);
+
+  const updateTypingStatus = async (typing) => {
+    if (!currentUserId || !contact?.id) return;
+    try {
+      const normalizedContactId = normalizeId(contact.id);
+      const conversationId = getConversationId(currentUserId, normalizedContactId);
+      await setDoc(
+        doc(db, 'conversations', conversationId),
+        {
+          typing: {
+            [currentUserId]: typing,
+          },
+        },
+        { merge: true }
+      );
+    } catch (e) {
+      console.warn('ChatScreen: error updating typing status', e);
+    }
+  };
+
+
   const normalizeId = (value) => {
     if (!value) return '';
     const digits = value.toString().replace(/\D/g, '');

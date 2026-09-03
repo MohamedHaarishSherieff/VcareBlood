@@ -7,6 +7,19 @@ const postsCollection = collection(db, 'posts');
 
 const TEN_DAYS_IN_MS = 10 * 24 * 60 * 60 * 1000; // 10 days in milliseconds
 
+/**
+ * Universal date parser for Firestore Timestamps, ISO strings, and millisecond values
+ */
+const parsePostDate = (val) => {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  if (typeof val.toDate === 'function') return val.toDate();
+  if (typeof val === 'number') return new Date(val);
+  if (val.seconds) return new Date(val.seconds * 1000);
+  const parsed = new Date(val);
+  return isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const postService = {
   createPost: async ({ authorId, authorName, title, text, imageBase64 }) => {
     try {
@@ -43,7 +56,7 @@ const postService = {
   deletePost: async (postId) => {
     try {
       if (!postId) throw new Error('Missing postId');
-      await storageService.deletePostImage(postId);
+      await storageService.deletePostImage(postId).catch(() => {});
       const postRef = doc(db, 'posts', postId);
       await deleteDoc(postRef);
       return true;
@@ -53,27 +66,22 @@ const postService = {
   },
 
   /**
-   * Permanently delete posts that are 10 days or older from Firestore
+   * Permanently delete posts that are 10 days or older from Firestore & Cloud Storage
    */
   cleanupExpiredPosts: async () => {
     try {
-      const now = new Date().getTime();
+      const now = Date.now();
       const snapshot = await getDocs(postsCollection);
       const deletePromises = [];
 
       snapshot.docs.forEach(docSnap => {
         const data = docSnap.data();
-        let createdAtDate = null;
-        if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-          createdAtDate = data.createdAt.toDate();
-        } else if (data.createdAt && data.createdAt.seconds) {
-          createdAtDate = new Date(data.createdAt.seconds * 1000);
-        }
+        const createdAtDate = parsePostDate(data.createdAt);
 
         if (createdAtDate) {
           const ageInMillis = now - createdAtDate.getTime();
           if (ageInMillis >= TEN_DAYS_IN_MS) {
-            console.log(`Auto-deleting post >10 days old: ${docSnap.id}`);
+            console.log(`Auto-deleting expired post (>10 days old): ${docSnap.id}`);
             deletePromises.push(
               storageService.deletePostImage(docSnap.id).catch(() => {}),
               deleteDoc(doc(db, 'posts', docSnap.id)).catch(() => {})
@@ -84,7 +92,7 @@ const postService = {
 
       if (deletePromises.length > 0) {
         await Promise.all(deletePromises);
-        console.log(`Cleaned up ${deletePromises.length} expired posts.`);
+        console.log(`Cleaned up ${deletePromises.length} expired post records.`);
       }
     } catch (error) {
       console.warn('Expired posts cleanup notice:', error);
@@ -143,29 +151,22 @@ const postService = {
         snapshot = await getDocs(qFallback);
       }
 
-      const now = new Date().getTime();
+      const now = Date.now();
       const posts = snapshot.docs
         .map(doc => {
           const data = doc.data();
-          let createdAt = data.createdAt;
-          if (createdAt && typeof createdAt.toDate === 'function') {
-            createdAt = createdAt.toDate();
-          } else if (createdAt && createdAt.seconds) {
-            createdAt = new Date(createdAt.seconds * 1000);
-          } else if (!createdAt) {
-            createdAt = new Date();
-          }
+          const createdAt = parsePostDate(data.createdAt) || new Date();
           return { id: doc.id, ...data, createdAt };
         })
         .filter(post => {
           // Exclude any posts that are 10 days or older
-          const postTime = post.createdAt instanceof Date ? post.createdAt.getTime() : new Date(post.createdAt).getTime();
+          const postTime = post.createdAt.getTime();
           return now - postTime < TEN_DAYS_IN_MS;
         });
 
       return posts.sort((a, b) => {
-        const timeA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-        const timeB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+        const timeA = a.createdAt.getTime();
+        const timeB = b.createdAt.getTime();
         return (timeB || 0) - (timeA || 0);
       });
     } catch (error) {
@@ -178,19 +179,12 @@ const postService = {
       if (!userId) return [];
       const normalizedPhone = userId.toString().replace(/\D/g, '').slice(-10);
 
-      const now = new Date().getTime();
+      const now = Date.now();
       const snapshot = await getDocs(query(postsCollection, limit(limitCount * 2)));
       const posts = snapshot.docs
         .map(doc => {
           const data = doc.data();
-          let createdAt = data.createdAt;
-          if (createdAt && typeof createdAt.toDate === 'function') {
-            createdAt = createdAt.toDate();
-          } else if (createdAt && createdAt.seconds) {
-            createdAt = new Date(createdAt.seconds * 1000);
-          } else if (!createdAt) {
-            createdAt = new Date();
-          }
+          const createdAt = parsePostDate(data.createdAt) || new Date();
           return { id: doc.id, ...data, createdAt };
         })
         .filter(post => {
@@ -198,15 +192,15 @@ const postService = {
           const cleanAuthorId = authorId.replace(/\D/g, '').slice(-10);
           const matchesUser = authorId === userId || cleanAuthorId === normalizedPhone || (normalizedPhone && authorId.includes(normalizedPhone));
           
-          const postTime = post.createdAt instanceof Date ? post.createdAt.getTime() : new Date(post.createdAt).getTime();
+          const postTime = post.createdAt.getTime();
           const isFresh = now - postTime < TEN_DAYS_IN_MS;
 
           return matchesUser && isFresh;
         });
 
       return posts.sort((a, b) => {
-        const timeA = a.createdAt instanceof Date ? a.createdAt.getTime() : new Date(a.createdAt).getTime();
-        const timeB = b.createdAt instanceof Date ? b.createdAt.getTime() : new Date(b.createdAt).getTime();
+        const timeA = a.createdAt.getTime();
+        const timeB = b.createdAt.getTime();
         return (timeB || 0) - (timeA || 0);
       });
     } catch (error) {

@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
+import { LanguageContext } from '../context/LanguageContext';
 import {
   View,
   Text,
@@ -428,6 +429,16 @@ export default function ProfileScreen({ route, navigation }) {
         showsVerticalScrollIndicator={false}
       >
 
+        {(!isOwnProfile || route?.name === 'UserProfile') && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', backgroundColor: '#FFFFFF' }}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={{ flexDirection: 'row', alignItems: 'center', padding: 6 }}>
+              <MaterialCommunityIcons name="arrow-left" size={24} color="#D32F2F" />
+              <Text style={{ marginLeft: 6, fontSize: 16, fontWeight: '700', color: '#D32F2F' }}>Back</Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#0F172A' }}>{profile?.name || 'Donor Profile'}</Text>
+            <View style={{ width: 60 }} />
+          </View>
+        )}
         <View style={{ width: '100%', alignItems: 'flex-end', paddingRight: 16, paddingTop: 8 }}>
           <Menu
             visible={menuVisible}
